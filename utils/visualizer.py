@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-
+import sys
+sys.dont_write_bytecode = True
 
 def plot_schedule_by_day(schedule):
     """

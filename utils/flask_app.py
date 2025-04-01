@@ -1,8 +1,8 @@
 # app.py
 from flask import Flask, jsonify
 from flask_cors import CORS
-from realtime_whisper  import audio_processing as ts
 from stateful_scheduling import search_with_rag as rag
+from realtime_whisper  import audio_processing as ts
 from main import do_optimization as opt
 import datetime
 import requests
@@ -11,7 +11,8 @@ transcription = ''
 result = ''
 current_schedule = ''
 app = Flask(__name__)
-
+import sys
+sys.dont_write_bytecode = True
 CORS(app)  # Enable cross-origin requests for React frontend
 
 @app.route('/record', methods=['POST'])

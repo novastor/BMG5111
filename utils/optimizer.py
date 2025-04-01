@@ -4,7 +4,7 @@ from ortools.sat.python import cp_model
 from datetime import datetime, timedelta
 from maintenance import bump_priority_zero, insert_maintenance_blocks
 from config import machines
-from utils import time_to_minutes, minutes_to_datetime, is_non_peak
+from utils import minutes_to_datetime
 import io
 
 def optimize_scan_scheduling(scans, schedule_csv_path):
