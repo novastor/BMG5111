@@ -5,6 +5,7 @@ from stateful_scheduling import search_with_rag as rag
 from realtime_whisper  import audio_processing as ts
 from main import do_optimization as opt
 import datetime
+import os
 import requests
 index ='scheduler-vectorised'
 transcription = ''
@@ -64,7 +65,8 @@ def optimizer():
 #    return jsonify({"result": result})
       
 if __name__ == '__main__':
-    app.run(debug=False)
+       port = int(os.environ.get("PORT", 5000))  # Default to 5000 if PORT is not set
+       app.run(host="0.0.0.0", port=port)
     
     
     
