@@ -1,0 +1,20 @@
+# Ignore environment variables
+.env
+# Python-related
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Node.js dependencies (for your React frontend)
+node_modules/
+build/
+speech.py
