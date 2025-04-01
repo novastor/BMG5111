@@ -16,6 +16,10 @@ import sys
 sys.dont_write_bytecode = True
 CORS(app)  # Enable cross-origin requests for React frontend
 
+@app.route("/")  
+def home():
+    return "Flask is running on Render!"
+
 @app.route('/record', methods=['POST'])
 def record_and_transcribe():
     """API endpoint to trigger recording and transcription."""
@@ -38,7 +42,7 @@ def schedule():
 def optimizer():
     """API endpoint to trigger optimization."""
     # Make a POST request to /process
-    response = requests.post("http://localhost:5000/process")
+    response = requests.post("https://bmg5111.onrender.com/process")
     print("response = ")
     if response.status_code != 200:
         return jsonify({"error": "Failed to get result from /process"}), 400
