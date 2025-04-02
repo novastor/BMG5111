@@ -26,7 +26,11 @@ import os
 #    #wav_buffer = convert_bytearray_to_wav_ndarray(wav_buffer)
 #    return wav_buffer
 def audio_mockup():
-    return "the patient suffered an acute stroke with no further complications"
+    def audio_mockup():
+    mockup = io.BytesIO()
+    mockup.write("the patient suffered an acute stroke with no further complications")
+    mockup.seek(0)
+    return mockup
 def audio_processing():
         """
         audio file processing and text generation function 
