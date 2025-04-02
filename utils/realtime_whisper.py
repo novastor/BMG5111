@@ -2,37 +2,40 @@
 from openai import OpenAI
 import wave
 import io
-import soundcard as sc
+#import soundcard as sc
 import numpy as np
 from dotenv import load_dotenv
 import os
-def audio_capture():
-    mic = sc.default_microphone()
-    print(mic)
-    rate = 32000
-    seconds = 10
-    frames = rate*seconds
-    data = mic.record(samplerate=rate,numframes=frames)
-    d16 = np.int16(data*32767)
-    wav_buffer = io.BytesIO()
-
-    with wave.open(wav_buffer, 'wb') as wf:
-        wf.setnchannels(2)
-        wf.setsampwidth(2)
-        wf.setframerate(32000)
-        wf.writeframes(d16.tobytes())
-    wav_buffer.name = "buffer.wav"
-  # Reset buffer position
-    #wav_buffer = convert_bytearray_to_wav_ndarray(wav_buffer)
-    return wav_buffer
-def audio_mockup(filename):
-    return "mockup.txt"
+#def audio_capture():
+#    mic = sc.default_microphone()
+#    print(mic)
+#    rate = 32000
+#    seconds = 10
+#    frames = rate*seconds
+#    data = mic.record(samplerate=rate,numframes=frames)
+#    d16 = np.int16(data*32767)
+#    wav_buffer = io.BytesIO()
+#
+#    with wave.open(wav_buffer, 'wb') as wf:
+#        wf.setnchannels(2)
+#        wf.setsampwidth(2)
+#        wf.setframerate(32000)
+#        wf.writeframes(d16.tobytes())
+#    wav_buffer.name = "buffer.wav"
+#  # Reset buffer position
+#    #wav_buffer = convert_bytearray_to_wav_ndarray(wav_buffer)
+#    return wav_buffer
+def audio_mockup():
+    mockup = io.BytesIO()
+    mockup.write("the patient suffered an acute stroke with no further complications")
+    mockup.seek(0)
+    return mockup
 def audio_processing():
         """
         audio file processing and text generation function 
         returns string
         """
-        buffer = audio_capture()
+        buffer = audio_mockup()
         # Check if the API key is provided as an environment variable
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")

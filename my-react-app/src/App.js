@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FaMicrophone, FaPlay, FaTimes } from "react-icons/fa";
 import "./styles.css"; // Import the CSS file
-
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -13,7 +13,7 @@ export default function AudioRecorder() {
   // Handler for recording audio
   const handleRecording = async () => {
     setIsRecording(true);
-    const response = await fetch("http://localhost:5000/record", { method: "POST" });
+    const response = await fetch(`${API_BASE_URL}/record`, { method: "POST" });
     const data = await response.json();
     setTranscription(data.transcription);
     setIsRecording(false);
@@ -22,7 +22,8 @@ export default function AudioRecorder() {
   // Handler for processing the transcription (if needed)
   const handleProcessing = async () => {
     setIsProcessing(true);
-    const response = await fetch("http://localhost:5000/process", {
+    console.log("API_BASE_URL at render:", process.env.REACT_APP_API_URL);
+    const response = await fetch(`${API_BASE_URL}/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcription }),
@@ -35,7 +36,8 @@ export default function AudioRecorder() {
   // Handler for optimizing: expects a list of dictionaries returned from backend
   const handleOptimzier = async () => {
     setIsOptimizing(true);
-    const response = await fetch("http://localhost:5000/optimize", {
+    console.log("API_BASE_URL:", API_BASE_URL)
+    const response = await fetch(`${API_BASE_URL}/optimize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcription }),

@@ -5,6 +5,7 @@ from stateful_scheduling import search_with_rag as rag
 from realtime_whisper  import audio_processing as ts
 from main import do_optimization as opt
 import datetime
+import os
 import requests
 index ='scheduler-vectorised'
 transcription = ''
@@ -14,6 +15,10 @@ app = Flask(__name__)
 import sys
 sys.dont_write_bytecode = True
 CORS(app)  # Enable cross-origin requests for React frontend
+link = os.environ.get('api_link')
+@app.route("/")  
+def home():
+    return "Flask is running on Render!"
 
 @app.route('/record', methods=['POST'])
 def record_and_transcribe():
@@ -37,7 +42,8 @@ def schedule():
 def optimizer():
     """API endpoint to trigger optimization."""
     # Make a POST request to /process
-    response = requests.post("http://localhost:5000/process")
+    url = link + "/process"
+    response = requests.post("https://bmg5111.onrender.com/process")
     print("response = ")
     if response.status_code != 200:
         return jsonify({"error": "Failed to get result from /process"}), 400
@@ -64,7 +70,8 @@ def optimizer():
 #    return jsonify({"result": result})
       
 if __name__ == '__main__':
-    app.run(debug=False)
+       port = int(os.environ.get("PORT", 10000)) 
+       app.run(host="0.0.0.0", port=port)
     
     
     
