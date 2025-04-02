@@ -24,6 +24,10 @@ def home():
 def home():
     return "Flask is running on Render!"
 
+@app.route("/")  
+def home():
+    return "Flask is running on Render!"
+
 @app.route('/record', methods=['POST'])
 def record_and_transcribe():
     """API endpoint to trigger recording and transcription."""
@@ -46,7 +50,6 @@ def schedule():
 def optimizer():
     """API endpoint to trigger optimization."""
     # Make a POST request to /process
-    url = link + "/process"
     response = requests.post("https://bmg5111.onrender.com/process")
     print("response = ")
     if response.status_code != 200:
@@ -74,7 +77,8 @@ def optimizer():
 #    return jsonify({"result": result})
       
 if __name__ == '__main__':
-       port = int(os.environ.get("PORT", 10000)) 
+       port = int(os.environ.get("PORT", 10000))  # Default to 5000 if PORT is not set
        app.run(host="0.0.0.0", port=port)
+    
     
     
