@@ -43,7 +43,8 @@ def schedule():
 def optimizer():
     """API endpoint to trigger optimization."""
     # Make a POST request to /process
-    response = requests.post("https://bmg5111.onrender.com/process")
+    target = link+"/process"
+    response = requests.post(target)
     print("response = ")
     if response.status_code != 200:
         return jsonify({"error": "Failed to get result from /process"}), 400
