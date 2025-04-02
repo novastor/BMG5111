@@ -20,13 +20,6 @@ link = os.environ.get('api_link')
 def home():
     return "Flask is running on Render!"
 
-@app.route("/")  
-def home():
-    return "Flask is running on Render!"
-
-@app.route("/")  
-def home():
-    return "Flask is running on Render!"
 
 @app.route('/record', methods=['POST'])
 def record_and_transcribe():
