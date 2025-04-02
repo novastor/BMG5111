@@ -19,7 +19,7 @@ export default function AudioRecorder() {
     setIsRecording(false);
   };
 
-  // Handler for processing the transcription (if needed)
+  // Handler for processing the transcription (obsolete, now part of optimizer but kept since removing it breaks the optimizer)
   const handleProcessing = async () => {
     setIsProcessing(true);
     console.log("API_BASE_URL at render:", process.env.REACT_APP_API_URL);
@@ -33,7 +33,7 @@ export default function AudioRecorder() {
     setIsProcessing(false);
   };
 
-  // Handler for optimizing: expects a list of dictionaries returned from backend
+  // Handler for optimizing: runs optimization scripts to add the processed prompt to the schedule
   const handleOptimzier = async () => {
     setIsOptimizing(true);
     console.log("API_BASE_URL:", API_BASE_URL)
@@ -47,7 +47,6 @@ export default function AudioRecorder() {
     const data = await response.json();
     console.log("response =" +response)
 
-    // Process the list of dictionaries and structure them for display
     console.log("entry :" +data)
     const rows = data.schedule.map((entry) => ({
       scan_id: entry.scan_id,
@@ -57,7 +56,7 @@ export default function AudioRecorder() {
       patient_id: entry.patient_id,
       check_in_date: entry.start_time.split(" ")[0], // Extract date from start_time
       check_in_time: entry.start_time.split(" ")[1], // Extract time from start_time
-      unit: entry.machine, // Assuming "machine" is the unit
+      unit: entry.machine, 
     }));
 
     setOutputData(rows);
