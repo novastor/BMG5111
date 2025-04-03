@@ -105,7 +105,6 @@ def optimize_workflow():
                 "duration": int(entry["duration"]),  # Convert to integer
                 "priority": int(entry["priority"]),  # Convert to integer
                 "patient_id": int(entry["patient_id"]),  # Convert to integer
-                "check_in_time": entry["check_in_time"],
                 "start_time": entry.get("start_time", ""),  # Default empty if missing
                 "machine": entry.get("machine", entry["scan_type"]),  # Assume machine is scan_type if missing
             }
