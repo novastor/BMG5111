@@ -78,12 +78,12 @@ def optimize_workflow():
         # Convert CSV string to list of dictionaries
         #csv_reader = csv.DictReader(io.StringIO(processed_csv))
         processed_output = list(processed_csv)
-
+        print("i did it")
         # Validate processed_output contains necessary keys
-        required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
-        for entry in processed_output:
-            if not required_keys.issubset(entry.keys()):
-                raise HTTPException(status_code=400, detail="Missing required fields in CSV data")
+       #required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
+       #for entry in processed_output:
+       #    if not required_keys.issubset(entry.keys()):
+       #        raise HTTPException(status_code=400, detail="Missing required fields in CSV data")
 
         # Optimize workflow (assuming opt() is a function that processes this list)
         optimized_csv = opt(processed_output)
