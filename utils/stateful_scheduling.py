@@ -58,7 +58,7 @@ def convert_output_to_csv(old_output):
     ])
     print("pre-split")
     print(output.getvalue())
-    return output.getvalue().strip()
+    return output.getvalue()
 
 def search_with_rag(index_name, input_text,pc_key):
     
@@ -114,5 +114,5 @@ def search_with_rag(index_name, input_text,pc_key):
     print((old_output).__class__)
     print("\nCSV Output complete:")
     
-    return old_output
+    return csv_result
 
