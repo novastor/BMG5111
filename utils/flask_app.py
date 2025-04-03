@@ -76,8 +76,8 @@ def optimize_workflow():
         logging.info(f"Processed CSV Output:\n{processed_csv}")
 
         # Convert CSV string to list of dictionaries
-        csv_reader = csv.DictReader(io.StringIO(processed_csv))
-        processed_output = list(csv_reader)
+        #csv_reader = csv.DictReader(io.StringIO(processed_csv))
+        processed_output = list(processed_csv)
 
         # Validate processed_output contains necessary keys
         required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
