@@ -6,6 +6,9 @@ import io
 import numpy as np
 from dotenv import load_dotenv
 import os
+'''
+this block is no longer is use, as the deployment is working with a pre-recorded input for the time being
+'''
 #def audio_capture():
 #    mic = sc.default_microphone()
 #    print(mic)
@@ -26,21 +29,22 @@ import os
 #    #wav_buffer = convert_bytearray_to_wav_ndarray(wav_buffer)
 #    return wav_buffer
 def audio_mockup():
-
+    '''
+    this is a method used to run during demos, as the web hosting seems to break when trying to run pulseaudio(known issue?)
+    '''
     mockup = io.BytesIO()
     mockup.write("the patient suffered an acute stroke with no further complications")
     mockup.seek(0)
     return mockup
 def audio_processing():
         """
-        audio file processing and text generation function 
-        returns string
+        transcribes audio file using whisper-1, returns string with detected speech
+        note: currently, as we are passign it a pre-existing string, this will always return the same thing, but if run locally will work properly
         """
         buffer = audio_mockup()
         # Check if the API key is provided as an environment variable
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
-        # If the API key is not provided as an environment variable, ask the user to input it
         if not api_key:
             api_key = input("Enter your OpenAI API key: ")
 

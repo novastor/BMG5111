@@ -21,20 +21,8 @@ check_in_time = hour+":"+minute
 HARDCODED_CHECK_IN_TIME = check_in_time
 def convert_output_to_csv(old_output):
     """
-    Convert the old output string
-    if len(parts) < 5:
-        raise ValueError("Expected at least 5 comma-separated values in the old output")
-     into CSV format with headers:
-    scan_id,scan_type,duration,priority,patient_id,check_in_date,check_in_time
-    
-    Mapping:
-      - scan_id: Hardcoded
-      - scan_type: Last value of the old output
-      - duration: Hardcoded
-      - priority: Third value of the old output with letter removed (e.g., "P1" -> "1")
-      - patient_id: Hardcoded
-      - check_in_date: Hardcoded
-      - check_in_time: Hardcoded
+    Convert the old output string used from the old code to work with the optimization script without needing to rewrite both of them(not ideal but time-efficient)
+
     """
     # Assume the old output is comma-separated, e.g., "Head and Neck,Acute stroke,P1,24,MRI"
     parts = old_output.split(',')
@@ -45,7 +33,7 @@ def convert_output_to_csv(old_output):
     # Using parts[4] for scan_type (the last value)
     scan_type = parts[4].strip()
     
-    # Extract priority from parts[2] and remove non-digit characters (e.g., "P1" -> "1")
+    # Extract priority from parts[2] and remove non-digit characters 
     priority = ''.join(filter(str.isdigit, parts[2]))
     
     # Create an in-memory CSV string
@@ -71,7 +59,7 @@ def convert_output_to_csv(old_output):
 def search_with_rag(index_name, input_text):
     
     """
-    Generalized search function with stateless RAG method.
+    stateful rag function
     Inputs: string pinecone index name for target and string prompt text.
     Output: Generated CSV string.
     """
@@ -80,9 +68,6 @@ def search_with_rag(index_name, input_text):
     pc_key  =  os.getenv("PINECONE_API_KEY")
     # Reinitialize chat history if needed
     chat_history = []
-
-    # Load environment variables
-
     # Setup embeddings and Pinecone vector store
     embeddings = OpenAIEmbeddings(api_key=api_key)
     vectorstore = PineconeVectorStore(
@@ -107,7 +92,6 @@ def search_with_rag(index_name, input_text):
     prompt += input_text
     res = qa({"question": prompt, "chat_history": chat_history})
     
-    # Assuming the answer is a string like "Head and Neck,Acute stroke,P1,24,MRI"
     old_output = res["answer"]
     
     # Convert the old output to CSV format

@@ -1,64 +1,63 @@
-# app.py
-from flask import Flask, jsonify
-from flask_cors import CORS
+
+from fastapi.middleware.cors import CORSMiddleware
 from stateful_scheduling import search_with_rag as rag
 from realtime_whisper  import audio_processing as ts
 from main import do_optimization as opt
 import datetime
+from fastapi import FastAPI,HTTPException
 import os
+import sys
+import uvicorn
 import requests
 index ='scheduler-vectorised'
 transcription = ''
 result = ''
 current_schedule = ''
-app = Flask(__name__)
-import sys
-sys.dont_write_bytecode = True
-CORS(app)  # Enable cross-origin requests for React frontend
+app = FastAPI()
+sys.dont_write_bytecode = True 
+
+# CORS Middleware (Allow requests from any frontend)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change this to specific frontend URLs for security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 link = os.environ.get('api_link')
-@app.route("/")  
+@app.get("/")  
+@app.get("/")
 def home():
-    return "Flask is running on Render!"
+    return {"message": "FastAPI is running on Heroku/Render!"}
 
 
-@app.route('/record', methods=['POST'])
-def record_and_transcribe():
+@app.post("/record")
+async def record_and_transcribe():
     """API endpoint to trigger recording and transcription."""
     transcription = ts()  
-    print("\nTranscription:")
-    return jsonify({"transcription": transcription})
+    return {"transcription": transcription}
 
 
-@app.route('/process', methods=['POST'])
-
-def schedule():
-    """API endpoint to trigger recording and transcription."""
-    content = "the patient suffered an acute stroke with no further complications"
-    result = rag(index,content)
-
-    return jsonify({"result": result})
-
-
-@app.route('/optimize', methods=['POST'])
-def optimizer():
+@app.post("/optimize")
+async def optimizer():
     """API endpoint to trigger optimization."""
-    # Make a POST request to /process
-    target = link+"/process"
+    if not link:
+        raise HTTPException(status_code=500, detail="API link not found in environment variables")
+
+    target = f"{link}/process"
     response = requests.post(target)
-    print("response = ")
+
     if response.status_code != 200:
-        return jsonify({"error": "Failed to get result from /process"}), 400
+        raise HTTPException(status_code=400, detail="Failed to get result from /process")
     
     result = response.json().get("result")
-    
-
     if not result:
-        return jsonify({"error": "No result from /process"}), 400
-    
+        raise HTTPException(status_code=400, detail="No result from /process")
+
     optimized_result = opt(result)
-    print("\nSchedule:")
-    print(optimized_result)
-    return jsonify({"schedule": optimized_result})
+    return {"schedule": optimized_result}
+
 
 ##this is the scheduler for handling recordings, need to swap this in once testing is done
 #def schedule(content):
@@ -72,7 +71,6 @@ def optimizer():
       
 if __name__ == '__main__':
        port = int(os.environ.get("PORT", 10000))  # Default to 5000 if PORT is not set
-       app.run(host="0.0.0.0", port=port)
+       uvicorn.run(app, host="0.0.0.0", port=port)    
     
-    
-    
+   

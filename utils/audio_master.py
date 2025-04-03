@@ -20,7 +20,6 @@ def audio_processing(filename):
         returns .txt file
         """
     
-        # Ask user for the file path of the audio file
         audio_file_path = filename
 
         # Remove quotation marks from the file path if present
@@ -29,18 +28,17 @@ def audio_processing(filename):
         # Ask user for the desired response format (text or vtt)
         response_format ='text'
 
-        # Check if the API key is provided as an environment variable
+        # load env keys
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
-        pc_key  =  os.getenv("PINECONE_API_KEY")
         # If the API key is not provided as an environment variable, ask the user to input it
         if not api_key:
             api_key = input("Enter your OpenAI API key: ")
 
-        # Initialize OpenAI client with the provided API key
+        # Initialize 
         client = OpenAI(api_key=api_key)
 
-        # Open the audio file in binary read mode
+        # handle file buffer to do dynamic reading
         with open(audio_file_path, "rb") as audio_file:
             # Perform speech-to-text transcription
             print('transcribing')
