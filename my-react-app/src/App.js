@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { FaMicrophone, FaPlay, FaTimes } from "react-icons/fa";
 import "./styles.css"; // Import the CSS file
+
 const API_BASE_URL = process.env.REACT_APP_API_URL;
+
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -29,25 +31,23 @@ export default function AudioRecorder() {
       body: JSON.stringify({ transcription }),
     });
     await response.json();
-    
     setIsProcessing(false);
   };
 
   // Handler for optimizing: runs optimization scripts to add the processed prompt to the schedule
   const handleOptimzier = async () => {
     setIsOptimizing(true);
-    console.log("API_BASE_URL:", API_BASE_URL)
+    console.log("API_BASE_URL:", API_BASE_URL);
     const response = await fetch(`${API_BASE_URL}/optimize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcription }),
     });
-    
+
     // Get the JSON data (list of dictionaries) from the response
     const data = await response.json();
-    console.log("response =" +response)
-
-    console.log("entry :" +data)
+    console.log("response =", response);
+    console.log("entry =", data);
     const rows = data.schedule.map((entry) => ({
       scan_id: entry.scan_id,
       scan_type: entry.scan_type,
@@ -56,7 +56,7 @@ export default function AudioRecorder() {
       patient_id: entry.patient_id,
       check_in_date: entry.start_time.split(" ")[0], // Extract date from start_time
       check_in_time: entry.start_time.split(" ")[1], // Extract time from start_time
-      unit: entry.machine, 
+      unit: entry.machine,
     }));
 
     setOutputData(rows);
@@ -70,11 +70,11 @@ export default function AudioRecorder() {
       <header className="navbar">
         <h1>Welcome to the Medical Imaging Optimization Suite</h1>
       </header>
-  
+
       {/* Main Content */}
       <main className="content">
         <p>Please press the buttons below to record and process your voice input.</p>
-  
+
         {/* Action Buttons */}
         <div className="button-container">
           <button onClick={handleRecording} disabled={isRecording} className="btn btn-record">
@@ -88,7 +88,7 @@ export default function AudioRecorder() {
           </button>
         </div>
       </main>
-  
+
       {/* Popup Table for Output */}
       {showPopup && outputData && (
         <div className="popup">
@@ -129,8 +129,12 @@ export default function AudioRecorder() {
               </tbody>
             </table>
             <div className="button-container">
-              <button onClick={() => setShowPopup(false)} className="btn btn-close">Close</button>
-              <button onClick={() => setShowPopup(false)} className="btn btn-commit">Commit</button>
+              <button onClick={() => setShowPopup(false)} className="btn btn-close">
+                Close
+              </button>
+              <button onClick={() => setShowPopup(false)} className="btn btn-commit">
+                Commit
+              </button>
             </div>
           </div>
         </div>
