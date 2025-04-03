@@ -28,6 +28,8 @@ def convert_output_to_csv(old_output):
     # Assume the old output is comma-separated, e.g., "Head and Neck,Acute stroke,P1,24,MRI"
     parts = old_output.split(',')
     if len(parts) < 5:
+        print("actual length")
+        print(len(parts))
         raise ValueError("Expected at least 5 comma-separated values in the old output")
     
     # Extract the required parts
@@ -85,12 +87,22 @@ def search_with_rag(index_name, input_text):
     )
 
     # Prepare prompt and query the chain
-    prompt = ("reading the following text, identify the procedure performed from the document, "
-              "and return its severity index and maximum allowable wait time. The output should be only "
-              "the condition location (head, torso, etc...), condition, index, wait time, and type of machine "
-              "(CT) with no other text, with the format: location,desc,index,time,mach. "
-              "Return the wait time as a purely numerical value in hours. : ")
+    prompt = (
+    "Extract the following information from the provided text: \n"
+    "1. Condition location (e.g., head, torso, etc.)\n"
+    "2. Condition description\n"
+    "3. Severity index (P1, P2, etc.)\n"
+    "4. Maximum allowable wait time in hours (as a number)\n"
+    "5. Machine type used (e.g., CT, MRI, etc.)\n\n"
+    "Format the output exactly as follows, with values separated by commas:\n"
+    "location,desc,index,time,mach\n\n"
+    "For example:\n"
+    "Head,Acute stroke,P1,24,MRI\n\n"
+    "Only return the extracted values in this format, with no extra text or explanations.\n"
+    "Input text:\n"
+    )
     prompt += input_text
+
     res = qa({"question": prompt, "chat_history": chat_history})
     
     old_output = res["answer"]
