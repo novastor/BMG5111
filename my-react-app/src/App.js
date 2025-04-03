@@ -38,31 +38,51 @@ export default function AudioRecorder() {
   const handleOptimzier = async () => {
     setIsOptimizing(true);
     console.log("API_BASE_URL:", API_BASE_URL);
-    const response = await fetch(`${API_BASE_URL}/optimize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcription }),
-    });
 
-    // Get the JSON data (list of dictionaries) from the response
-    const data = await response.json();
-    console.log("response =", response);
-    console.log("entry =", data);
-    const rows = data.schedule.map((entry) => ({
-      scan_id: entry.scan_id,
-      scan_type: entry.scan_type,
-      duration: entry.duration,
-      priority: entry.priority,
-      patient_id: entry.patient_id,
-      check_in_date: entry.start_time.split(" ")[0], // Extract date from start_time
-      check_in_time: entry.start_time.split(" ")[1], // Extract time from start_time
-      unit: entry.machine,
-    }));
+    try {
+        const response = await fetch(`${API_BASE_URL}/optimize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transcription }),  // ✅ Ensure JSON format
+        });
 
-    setOutputData(rows);
-    setShowPopup(true);
-    setIsOptimizing(false);
-  };
+        // Handle HTTP errors
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+        }
+
+        // Get the JSON response
+        const data = await response.json();
+        console.log("Response Data:", data);
+
+        // Check if schedule exists
+        if (!data.schedule || !Array.isArray(data.schedule)) {
+            throw new Error("Invalid schedule format received");
+        }
+
+        // Convert response into table-friendly format
+        const rows = data.schedule.map((entry) => ({
+            scan_id: entry.scan_id,
+            scan_type: entry.scan_type,
+            duration: entry.duration,
+            priority: entry.priority,
+            patient_id: entry.patient_id,
+            check_in_date: entry.start_time ? entry.start_time.split(" ")[0] : "N/A", // Extract date
+            check_in_time: entry.start_time ? entry.start_time.split(" ")[1] : "N/A", // Extract time
+            unit: entry.machine || "Unknown",
+        }));
+
+        setOutputData(rows);
+        setShowPopup(true);
+    } catch (error) {
+        console.error("Optimization failed:", error);
+        alert(`Optimization failed: ${error.message}`);
+    } finally {
+        setIsOptimizing(false);
+    }
+};
+
 
   return (
     <div className="container">

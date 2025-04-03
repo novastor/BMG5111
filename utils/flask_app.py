@@ -4,6 +4,7 @@ from stateful_scheduling import search_with_rag as rag
 from realtime_whisper  import audio_processing as ts
 from main import do_optimization as opt
 import datetime
+
 import logging
 from fastapi import FastAPI,HTTPException
 import os
@@ -27,7 +28,7 @@ app.add_middleware(
 )
 
 link = os.environ.get('api_link')
-@app.get("/")
+@app.get("/")# Add this to allow HEAD requests
 def home():
     return {"message": "FastAPI is running on Heroku/Render!"}
 
@@ -83,6 +84,7 @@ def optimize_workflow(transcription: str):
 #    return jsonify({"result": result})
       
 if __name__ == '__main__':
+       
        port = int(os.environ.get("PORT", 10000))  # Default to 5000 if PORT is not set
        uvicorn.run(app, host="0.0.0.0", port=port)    
     
