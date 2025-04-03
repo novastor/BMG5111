@@ -19,9 +19,6 @@ hour =  str(random.randint(0, 23))
 minute =  str(random.randint(0, 59))
 check_in_time = hour+":"+minute
 HARDCODED_CHECK_IN_TIME = check_in_time
-import logging
-logging.info(f"API link: {link}")
-logging.info(f"Target URL: {target}")
 
 def convert_output_to_csv(old_output):
     """
