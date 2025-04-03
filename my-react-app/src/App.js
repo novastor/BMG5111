@@ -107,54 +107,55 @@ export default function AudioRecorder() {
 
       {/* Popup Table for Output */}
       {showPopup && outputData && (
-        <div className="popup">
-          <div className="popup-content">
-            <div className="popup-header">
-              <h2>Schedule Preview</h2>
-              <button onClick={() => setShowPopup(false)} className="close-btn">
-                <FaTimes />
-              </button>
-            </div>
-            <p>Displaying request information. Please verify all data is correct.</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Scan ID</th>
-                  <th>Scan Type</th>
-                  <th>Duration</th>
-                  <th>Priority</th>
-                  <th>Patient ID</th>
-                  <th>Check In Date</th>
-                  <th>Check In Time</th>
-                  <th>Unit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outputData.map((row, index) => (
-                  <tr key={index}>
-                    <td>{row.scan_id}</td>
-                    <td>{row.scan_type}</td>
-                    <td>{row.duration}</td>
-                    <td>{row.priority}</td>
-                    <td>{row.patient_id}</td>
-                    <td>{row.check_in_date}</td>
-                    <td>{row.check_in_time}</td>
-                    <td>{row.unit}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="button-container">
-              <button onClick={() => setShowPopup(false)} className="btn btn-close">
-                Close
-              </button>
-              <button onClick={() => setShowPopup(false)} className="btn btn-commit">
-                Commit
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="popup">
+    <div className="popup-content">
+      <div className="popup-header">
+        <h2>Schedule Preview</h2>
+        <button onClick={() => setShowPopup(false)} className="close-btn">
+          <FaTimes />
+        </button>
+      </div>
+      <p>Displaying request information. Please verify all data is correct.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Scan ID</th>
+            <th>Scan Type</th>
+            <th>Duration</th>
+            <th>Priority</th>
+            <th>Patient ID</th>
+            <th>Check In Date</th>
+            <th>Check In Time</th>
+            <th>Unit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {outputData.map((row, index) => (
+            <tr key={index}>
+              <td>{row.scan_id}</td>
+              <td>{row.scan_type}</td>
+              <td>{row.duration}</td>
+              <td>{row.priority}</td>
+              <td>{row.patient_id}</td>
+              <td>{row.check_in_date}</td>
+              <td>{row.check_in_time}</td>
+              <td>{row.unit}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="button-container">
+        <button onClick={() => setShowPopup(false)} className="btn btn-close">
+          Close
+        </button>
+        <button onClick={() => setShowPopup(false)} className="btn btn-commit">
+          Commit
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
