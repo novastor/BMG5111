@@ -33,14 +33,14 @@ def home():
 
 
 @app.post("/record")
-async def record_and_transcribe():
+def record_and_transcribe():
     """API endpoint to trigger recording and transcription."""
     transcription = ts()  
     return {"transcription": transcription}
 
 @app.post('/process')
 
-async def schedule():
+def schedule():
     """API endpoint to trigger recording and transcription."""
     content = "the patient suffered an acute stroke with no further complications"
     result = rag(index,content)
@@ -50,11 +50,10 @@ async def schedule():
 
 
 @app.post("/optimize")
-async def optimize_workflow(transcription: str):
-    """Optimizes schedule using transcription without external process call."""
+def optimize_workflow(transcription: str):
     try:
         # Directly process the transcription instead of making an external request
-        processed_result = rag("scheduler-vectorised", transcription)
+        processed_result =  rag("scheduler-vectorised", transcription)
         if not processed_result or "answer" not in processed_result:
             raise HTTPException(status_code=400, detail="Processing failed")
 
