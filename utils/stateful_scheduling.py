@@ -60,7 +60,7 @@ def convert_output_to_csv(old_output):
     print(output.getvalue())
     return output.getvalue()
 
-def search_with_rag(index_name, input_text,pc_key):
+def search_with_rag(index_name, input_text):
     
     """
     stateful rag function
