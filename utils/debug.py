@@ -1,6 +1,6 @@
 import csv 
 from fastapi.middleware.cors import CORSMiddleware
-from stateful_scheduling import search_with_rag as rag
+from debug_stateful import search_with_rag as rag
 from realtime_whisper import audio_processing as ts
 from main import do_optimization as opt
 import logging
