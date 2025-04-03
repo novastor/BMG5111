@@ -1,23 +1,20 @@
-
 from fastapi.middleware.cors import CORSMiddleware
 from stateful_scheduling import search_with_rag as rag
-from realtime_whisper  import audio_processing as ts
+from realtime_whisper import audio_processing as ts
 from main import do_optimization as opt
-import datetime
-
 import logging
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import os
 import sys
 import uvicorn
-import requests
-index ='scheduler-vectorised'
-transcription = ''
-result = ''
-current_schedule = ''
+
+# Global variables
+index = 'scheduler-vectorised'
 app = FastAPI()
 sys.dont_write_bytecode = True 
 logging.basicConfig(level=logging.INFO)
+
 # CORS Middleware (Allow requests from any frontend)
 app.add_middleware(
     CORSMiddleware,
@@ -27,11 +24,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-link = os.environ.get('api_link')
-@app.get("/")# Add this to allow HEAD requests
-def home():
-    return {"message": "FastAPI is running on Heroku/Render!"}
+# Request Model for /optimize
+class TranscriptionRequest(BaseModel):
+    transcription: str
 
+# Response Model for /optimize
+class ScheduleEntry(BaseModel):
+    scan_id: str
+    scan_type: str
+    duration: int
+    priority: int
+    patient_id: str
+    start_time: str  # "YYYY-MM-DD HH:MM:SS"
+    machine: str
+
+class OptimizeResponse(BaseModel):
+    schedule: list[ScheduleEntry]
+
+@app.get("/")
+def home():
+    """Health check route."""
+    return {"message": "FastAPI is running on Heroku/Render!"}
 
 @app.post("/record")
 def record_and_transcribe():
@@ -39,53 +52,55 @@ def record_and_transcribe():
     transcription = ts()  
     return {"transcription": transcription}
 
-@app.post('/process')
-
+@app.post("/process")
 def schedule():
-    """API endpoint to trigger recording and transcription."""
+    """API endpoint to process transcription."""
     content = "the patient suffered an acute stroke with no further complications"
-    result = rag(index,content)
-
+    result = rag(index, content)
     return {"result": result}
 
-
-
-@app.post("/optimize")
-def optimize_workflow(transcription: str):
+@app.post("/optimize", response_model=OptimizeResponse)
+def optimize_workflow(request: TranscriptionRequest):
+    """Optimize the workflow based on transcribed input."""
     try:
-        # Directly process the transcription instead of making an external request
-        processed_result =  rag("scheduler-vectorised", transcription)
+        logging.info(f"Received transcription: {request.transcription}")
+
+        # Process the transcription
+        processed_result = rag(index, request.transcription)
         if not processed_result or "answer" not in processed_result:
             raise HTTPException(status_code=400, detail="Processing failed")
 
         # Extract processed output
         processed_output = processed_result["answer"]
+        logging.info(f"Processed output: {processed_output}")
 
-        # Optimize
+        # Optimize workflow
         optimized_schedule = opt(processed_output)
+        if not isinstance(optimized_schedule, list):
+            raise HTTPException(status_code=500, detail="Optimization failed")
 
-        return {"schedule": optimized_schedule}
+        # Validate & format schedule output
+        formatted_schedule = [
+            {
+                "scan_id": entry["scan_id"],
+                "scan_type": entry["scan_type"],
+                "duration": entry["duration"],
+                "priority": entry["priority"],
+                "patient_id": entry["patient_id"],
+                "start_time": entry["start_time"],
+                "machine": entry["machine"],
+            }
+            for entry in optimized_schedule
+        ]
+
+        logging.info(f"Optimized schedule: {formatted_schedule}")
+        return {"schedule": formatted_schedule}
 
     except Exception as e:
-        return {"error": str(e)}
-    
-    except Exception as e:
-        logging.error(f"Error calling /process: {e}")
+        logging.error(f"Error in /optimize: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-##this is the scheduler for handling recordings, need to swap this in once testing is done
-#def schedule(content):
-#    """API endpoint to trigger recording and transcription."""
-#    print(content)
-#    result = rag(index,content)  # Call your script
-#    result = result["answer"]
-#    print("\nTranscription:")
-#    print(result)
-#    return jsonify({"result": result})
-      
+# Run the FastAPI app
 if __name__ == '__main__':
-       
-       port = int(os.environ.get("PORT", 10000))  # Default to 5000 if PORT is not set
-       uvicorn.run(app, host="0.0.0.0", port=port)    
-    
-   
+    port = int(os.environ.get("PORT", 10000))  # Default to 10000 if PORT is not set
+    uvicorn.run(app, host="0.0.0.0", port=port)
