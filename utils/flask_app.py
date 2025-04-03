@@ -38,6 +38,16 @@ async def record_and_transcribe():
     transcription = ts()  
     return {"transcription": transcription}
 
+@app.post('/process')
+
+async def schedule():
+    """API endpoint to trigger recording and transcription."""
+    content = "the patient suffered an acute stroke with no further complications"
+    result = rag(index,content)
+
+    return {"result": result}
+
+
 
 @app.post("/optimize")
 async def optimizer():
