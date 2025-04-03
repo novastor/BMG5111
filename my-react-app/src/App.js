@@ -3,7 +3,7 @@ import { FaMicrophone, FaPlay, FaTimes } from "react-icons/fa";
 import "./styles.css"; // Import the CSS file
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
-
+console.log(API_BASE_URL)
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
