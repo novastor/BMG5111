@@ -66,10 +66,9 @@ def optimize_workflow(request: TranscriptionRequest):
     """Optimize the workflow based on transcribed input."""
     try:
         logging.info(f"Received transcription: {request.transcription}")
-        content = "the patient suffered an acute stroke with no further complications"
 
         # Process the transcription (RAG returns a CSV string)
-        processed_csv = rag(index, content)
+        processed_csv = rag(index, request.transcription)
         if not processed_csv:
             raise HTTPException(status_code=400, detail="Processing failed")
 
@@ -85,13 +84,17 @@ def optimize_workflow(request: TranscriptionRequest):
             if not required_keys.issubset(entry.keys()):
                 raise HTTPException(status_code=400, detail="Missing required fields in CSV data")
 
-        # Optimize workflow by calling the external optimizer function
-        optimized_schedule = opt(processed_output)
-        print("optimized output :")
-        print(optimized_schedule)
-        print("end of optimized output")
-        if not isinstance(optimized_schedule, list):
-            raise HTTPException(status_code=500, detail="Optimization failed")
+        # Optimize workflow (assuming opt() is a function that processes this list)
+        optimized_csv = opt(processed_output)
+
+        # Check if the result is a CSV string (which is expected if .to_csv() is used)
+        if isinstance(optimized_csv, str):
+            # Convert the CSV string back into a list of dictionaries
+            csv_reader = csv.DictReader(io.StringIO(optimized_csv))
+            optimized_schedule = list(csv_reader)
+        else:
+            # If it's not a CSV string, treat it as a list directly
+            optimized_schedule = optimized_csv
 
         # Validate & format schedule output
         formatted_schedule = [
