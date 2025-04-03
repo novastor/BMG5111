@@ -61,56 +61,37 @@ def schedule():
     result = rag(index, content)
     return {"result": result}
 
-@app.post("/optimize", response_model=OptimizeResponse)
-def optimize_workflow(request: TranscriptionRequest):
-    """Optimize the workflow based on transcribed input."""
-    try:
-        logging.info(f"Received transcription: {request.transcription}")
+@app.post("/optimize")
+def mock_optimize():
+    """Mock endpoint for testing frontend routing"""
+    logging.info("Mock /optimize endpoint hit")
 
-        # Process the transcription (RAG returns a CSV string)
-        processed_csv = rag(index, request.transcription)
-        if not processed_csv:
-            raise HTTPException(status_code=400, detail="Processing failed")
-
-        logging.info(f"Processed CSV Output:\n{processed_csv}")
-
-        # Convert CSV string to list of dictionaries
-        csv_reader = csv.DictReader(io.StringIO(processed_csv))
-        processed_output = list(csv_reader)
-
-        # Validate processed_output contains necessary keys
-        required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
-        for entry in processed_output:
-            if not required_keys.issubset(entry.keys()):
-                raise HTTPException(status_code=400, detail="Missing required fields in CSV data")
-
-        # Optimize workflow (assuming opt() is a function that processes this list)
-        optimized_schedule = opt(processed_output)
-        if not isinstance(optimized_schedule, list):
-            raise HTTPException(status_code=500, detail="Optimization failed")
-
-        # Validate & format schedule output
-        formatted_schedule = [
+    # Mocked CSV response parsed into structured JSON
+    mock_response = {
+        "schedule": [
             {
-                "scan_id": entry["scan_id"],
-                "scan_type": entry["scan_type"],
-                "duration": int(entry["duration"]),  # Convert to integer
-                "priority": int(entry["priority"]),  # Convert to integer
-                "patient_id": int(entry["patient_id"]),  # Convert to integer
-                "check_in_date": entry["check_in_date"],
-                "check_in_time": entry["check_in_time"],
-                "start_time": entry.get("start_time", ""),  # Default empty if missing
-                "machine": entry.get("machine", entry["scan_type"]),  # Assume machine is scan_type if missing
+                "scan_id": "S2",
+                "scan_type": "MRI",
+                "duration": 26,
+                "priority": 1,
+                "patient_id": 6,
+                "start_time": "2025-03-25 11:11",
+                "machine": "MRI"
+            },
+            {
+                "scan_id": "S5",
+                "scan_type": "CT",
+                "duration": 35,
+                "priority": 2,
+                "patient_id": 8,
+                "start_time": "2025-03-25 14:30",
+                "machine": "CT"
             }
-            for entry in optimized_schedule
         ]
+    }
 
-        logging.info(f"Optimized schedule: {formatted_schedule}")
-        return {"schedule": formatted_schedule}
-
-    except Exception as e:
-        logging.error(f"Error in /optimize: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    logging.info(f"Mock response: {mock_response}")
+    return mock_response
 
 
 # Run the FastAPI app

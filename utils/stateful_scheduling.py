@@ -23,21 +23,22 @@ HARDCODED_CHECK_IN_TIME = check_in_time
 def convert_output_to_csv(old_output):
     """
     Convert the old output string used from the old code to work with the optimization script without needing to rewrite both of them(not ideal but time-efficient)
-
     """
-    # Assume the old output is comma-separated, e.g., "Head and Neck,Acute stroke,P1,24,MRI"
+    # Print the raw output to debug
+    print("Raw Output:", old_output)
+    
+    # Split by commas
     parts = old_output.split(',')
+    
+    # Check if the expected parts are present
     if len(parts) < 5:
-        print("actual length")
-        print(len(parts))
-        raise ValueError("Expected at least 5 comma-separated values in the old output")
+        print("Actual number of parts:", len(parts))
+        print("Parts:", parts)
+        raise ValueError(f"Expected at least 5 comma-separated values in the old output, but got {len(parts)}.")
     
     # Extract the required parts
-    # Using parts[4] for scan_type (the last value)
-    scan_type = parts[4].strip()
-    
-    # Extract priority from parts[2] and remove non-digit characters 
-    priority = ''.join(filter(str.isdigit, parts[2]))
+    scan_type = parts[4].strip()  # Assuming the scan type is the 5th value
+    priority = ''.join(filter(str.isdigit, parts[2]))  # Extracting digits from priority part
     
     # Create an in-memory CSV string
     output = io.StringIO()
@@ -57,7 +58,9 @@ def convert_output_to_csv(old_output):
         HARDCODED_CHECK_IN_TIME
     ])
     
+    # Return the CSV string (stripped of leading/trailing whitespace)
     return output.getvalue().strip()
+
 
 def search_with_rag(index_name, input_text):
     
