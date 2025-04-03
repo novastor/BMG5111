@@ -27,7 +27,6 @@ app.add_middleware(
 )
 
 link = os.environ.get('api_link')
-@app.get("/")  
 @app.get("/")
 def home():
     return {"message": "FastAPI is running on Heroku/Render!"}
@@ -57,7 +56,7 @@ async def optimizer():
     if not link:
         raise HTTPException(status_code=500, detail="API link not found in environment variables")
 
-    target = f"https://your-app.onrender.com/process"
+    target = f"https://bmg5111.onrender.com//process"
     logging.info(f"Constructed target URL: {target}")
     response = requests.post(target)
 
