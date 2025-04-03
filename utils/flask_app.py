@@ -52,7 +52,7 @@ async def schedule():
 
 @app.post("/optimize")
 async def optimizer():
-    logging.info(f"API link from environment: {link}")
+    #logging.info(f"API link from environment: {link}")
     """API endpoint to trigger optimization."""
     if not link:
         raise HTTPException(status_code=500, detail="API link not found in environment variables")
