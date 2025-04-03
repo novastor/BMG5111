@@ -51,25 +51,35 @@ async def schedule():
 
 @app.post("/optimize")
 async def optimizer():
-    #logging.info(f"API link from environment: {link}")
     """API endpoint to trigger optimization."""
     if not link:
+        logging.error("API link not found in environment variables")
         raise HTTPException(status_code=500, detail="API link not found in environment variables")
 
-    target = f"https://bmg5111.onrender.com//process"
+    target = f"{link}/process"
     logging.info(f"Constructed target URL: {target}")
-    response = requests.post(target)
-
-    if response.status_code != 200:
-        raise HTTPException(status_code=400, detail="Failed to get result from /process")
     
-    result = response.json().get("result")
-    if not result:
-        raise HTTPException(status_code=400, detail="No result from /process")
+    try:
+        response = requests.post(target)
+        logging.info(f"Response status code: {response.status_code}")
+        logging.info(f"Response content: {response.text}")  # See full response
 
-    optimized_result = opt(result)
-    return {"schedule": optimized_result}
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail=f"Failed to get result from /process: {response.text}")
+        
+        response_json = response.json()
+        result = response_json.get("result")
+        logging.info(f"Extracted result: {result}")
 
+        if not result:
+            raise HTTPException(status_code=400, detail="No result from /process")
+
+        optimized_result = opt(result)
+        return {"schedule": optimized_result}
+    
+    except Exception as e:
+        logging.error(f"Error calling /process: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 ##this is the scheduler for handling recordings, need to swap this in once testing is done
 #def schedule(content):
