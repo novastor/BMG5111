@@ -78,7 +78,7 @@ def search_with_rag(index_name, input_text):
     )
 
     # Setup chat model
-    chat = ChatOpenAI(verbose=True, temperature=0, model_name="gpt-4", api_key=api_key)
+    chat = ChatOpenAI(verbose=True, temperature=0, model_name="gpt-4o-mini", api_key=api_key)
 
     qa = ConversationalRetrievalChain.from_llm(
         llm=chat, chain_type="stuff", retriever=vectorstore.as_retriever()
