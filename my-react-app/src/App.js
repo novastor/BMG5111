@@ -55,7 +55,7 @@ export default function AudioRecorder() {
       // Get the JSON response
       const data = await response.json();
       console.log("Response Data:", data);
-  
+      
       // Map response properly using check_in_date and check_in_time if available.
       const rows = data.schedule.map((entry) => ({
         scan_id: entry.scan_id,

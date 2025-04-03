@@ -61,13 +61,13 @@ def schedule():
     result = rag(index, content)
     return {"result": result}
 
-@app.post("/optimize", response_model=OptimizeResponse)
+@app.post("/optimize")
 def optimize_workflow(request: TranscriptionRequest):
     """Optimize the workflow based on transcribed input."""
     try:
         request.transcription =  "the patient suffered an acute stroke with no further complications"
         logging.info(f"Received transcription: {request.transcription}")
-
+        
         # Process the transcription (RAG returns a CSV string)
         processed_csv = rag(index, request.transcription)
         if not processed_csv:

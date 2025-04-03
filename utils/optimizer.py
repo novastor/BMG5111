@@ -203,5 +203,6 @@ def optimize_scan_scheduling(scans, schedule_csv_path):
         cleaned_schedule.append(cleaned_entry)
 
     pd.DataFrame(cleaned_schedule).to_csv(schedule_csv_path, index=False)
-    
+    print(type(cleaned_schedule))
+    print(cleaned_schedule)
     return cleaned_schedule
