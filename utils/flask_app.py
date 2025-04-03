@@ -4,6 +4,7 @@ from stateful_scheduling import search_with_rag as rag
 from realtime_whisper  import audio_processing as ts
 from main import do_optimization as opt
 import datetime
+import logging
 from fastapi import FastAPI,HTTPException
 import os
 import sys
@@ -15,7 +16,7 @@ result = ''
 current_schedule = ''
 app = FastAPI()
 sys.dont_write_bytecode = True 
-
+logging.basicConfig(level=logging.INFO)
 # CORS Middleware (Allow requests from any frontend)
 app.add_middleware(
     CORSMiddleware,
@@ -51,11 +52,13 @@ async def schedule():
 
 @app.post("/optimize")
 async def optimizer():
+    logging.info(f"API link from environment: {link}")
     """API endpoint to trigger optimization."""
     if not link:
         raise HTTPException(status_code=500, detail="API link not found in environment variables")
 
-    target = f"{link}/process"
+    target = f"https://your-app.onrender.com/process"
+    logging.info(f"Constructed target URL: {target}")
     response = requests.post(target)
 
     if response.status_code != 200:
