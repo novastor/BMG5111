@@ -23,22 +23,21 @@ HARDCODED_CHECK_IN_TIME = check_in_time
 def convert_output_to_csv(old_output):
     """
     Convert the old output string used from the old code to work with the optimization script without needing to rewrite both of them(not ideal but time-efficient)
+
     """
-    # Print the raw output to debug
-    print("Raw Output:", old_output)
-    
-    # Split by commas
+    # Assume the old output is comma-separated, e.g., "Head and Neck,Acute stroke,P1,24,MRI"
     parts = old_output.split(',')
-    
-    # Check if the expected parts are present
     if len(parts) < 5:
-        print("Actual number of parts:", len(parts))
-        print("Parts:", parts)
-        raise ValueError(f"Expected at least 5 comma-separated values in the old output, but got {len(parts)}.")
+        print("actual length")
+        print(len(parts))
+        raise ValueError("Expected at least 5 comma-separated values in the old output")
     
     # Extract the required parts
-    scan_type = parts[4].strip()  # Assuming the scan type is the 5th value
-    priority = ''.join(filter(str.isdigit, parts[2]))  # Extracting digits from priority part
+    # Using parts[4] for scan_type (the last value)
+    scan_type = parts[4].strip()
+    
+    # Extract priority from parts[2] and remove non-digit characters 
+    priority = ''.join(filter(str.isdigit, parts[2]))
     
     # Create an in-memory CSV string
     output = io.StringIO()
@@ -57,12 +56,11 @@ def convert_output_to_csv(old_output):
         HARDCODED_CHECK_IN_DATE,
         HARDCODED_CHECK_IN_TIME
     ])
-    
-    # Return the CSV string (stripped of leading/trailing whitespace)
+    print("pre-split")
+    print(output.getvalue())
     return output.getvalue().strip()
 
-
-def search_with_rag(index_name, input_text):
+def search_with_rag(index_name, input_text,pc_key):
     
     """
     stateful rag function
@@ -113,8 +111,8 @@ def search_with_rag(index_name, input_text):
     # Convert the old output to CSV format
     csv_result = convert_output_to_csv(old_output)
     print("\nCSV Output:")
-    print(csv_result)
+    print((old_output).__class__)
     print("\nCSV Output complete:")
     
-    return csv_result
+    return old_output
 

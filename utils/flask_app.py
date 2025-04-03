@@ -92,7 +92,7 @@ def optimize_workflow():
         if isinstance(optimized_csv, str):
             # Convert the CSV string back into a list of dictionaries
             csv_reader = csv.DictReader(io.StringIO(optimized_csv))
-            optimized_schedule = list(csv_reader)
+            optimized_schedule = (csv_reader)
         else:
             # If it's not a CSV string, treat it as a list directly
             optimized_schedule = optimized_csv
