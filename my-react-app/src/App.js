@@ -38,52 +38,45 @@ export default function AudioRecorder() {
   const handleOptimzier = async () => {
     setIsOptimizing(true);
     console.log("API_BASE_URL:", process.env.REACT_APP_API_URL);
-
+  
     try {
-        const response = await fetch(`${API_BASE_URL}/optimize`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ transcription }),  // ✅ Ensure JSON format
-        });
-
-        // Handle HTTP errors
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
-        }
-
-        // Get the response as text (since it's a CSV)
-        const csvText = await response.text();
-        console.log("CSV Output:", csvText);
-
-        // Parse CSV manually
-        const rows = csvText.trim().split("\n"); // Split by new line
-        const headers = rows[0].split(","); // First row is headers
-        const dataRows = rows.slice(1); // Remaining rows are data
-
-        const parsedData = dataRows.map(row => {
-            const values = row.split(","); // Split each row by comma
-            return {
-                scan_id: values[0],
-                scan_type: values[1],
-                duration: values[2],
-                priority: values[3],
-                patient_id: values[4],
-                check_in_date: values[5],
-                check_in_time: values[6],
-                unit: "N/A"  // No machine info in CSV
-            };
-        });
-
-        setOutputData(parsedData);
-        setShowPopup(true);
+      const response = await fetch(`${API_BASE_URL}/optimize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcription }), // Ensure JSON format
+      });
+  
+      // Handle HTTP errors
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+      }
+  
+      // Get the JSON response
+      const data = await response.json();
+      console.log("Response Data:", data);
+  
+      // Map response properly using check_in_date and check_in_time if available.
+      const rows = data.schedule.map((entry) => ({
+        scan_id: entry.scan_id,
+        scan_type: entry.scan_type,
+        duration: entry.duration,
+        priority: entry.priority,
+        patient_id: entry.patient_id,
+        check_in_date: entry.check_in_date || (entry.start_time ? entry.start_time.split(" ")[0] : "N/A"),
+        check_in_time: entry.check_in_time || (entry.start_time ? entry.start_time.split(" ")[1] : "N/A"),
+        unit: entry.machine || "Unknown",
+      }));
+  
+      setOutputData(rows);
+      setShowPopup(true);
     } catch (error) {
-        console.error("Optimization failed:", error);
-        alert(`Optimization failed: ${error.message}`);
+      console.error("Optimization failed:", error);
+      alert(`Optimization failed: ${error.message}`);
     } finally {
-        setIsOptimizing(false);
+      setIsOptimizing(false);
     }
-};
+  };
 
 
 
