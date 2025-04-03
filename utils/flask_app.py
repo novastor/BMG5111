@@ -77,8 +77,7 @@ def optimize_workflow():
 
         # Convert CSV string to list of dictionaries
         #csv_reader = csv.DictReader(io.StringIO(processed_csv))
-        processed_output = list(processed_csv)
-        print("i did it")
+        processed_output = (processed_csv)
         # Validate processed_output contains necessary keys
        #required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
        #for entry in processed_output:
@@ -96,6 +95,7 @@ def optimize_workflow():
         else:
             # If it's not a CSV string, treat it as a list directly
             optimized_schedule = optimized_csv
+        print("i did it")
 
         # Validate & format schedule output
         formatted_schedule = [
@@ -112,7 +112,7 @@ def optimize_workflow():
             }
             for entry in optimized_schedule
         ]
-
+        print("formatted")
         logging.info(f"Optimized schedule: {formatted_schedule}")
         return {"schedule": formatted_schedule}
 
