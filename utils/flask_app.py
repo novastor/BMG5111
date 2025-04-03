@@ -66,9 +66,10 @@ def optimize_workflow(request: TranscriptionRequest):
     """Optimize the workflow based on transcribed input."""
     try:
         logging.info(f"Received transcription: {request.transcription}")
+        content = "the patient suffered an acute stroke with no further complications"
 
         # Process the transcription (RAG returns a CSV string)
-        processed_csv = rag(index, request.transcription)
+        processed_csv = rag(index, content)
         if not processed_csv:
             raise HTTPException(status_code=400, detail="Processing failed")
 
