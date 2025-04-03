@@ -113,6 +113,6 @@ def search_with_rag(index_name, input_text,pc_key):
     print("\nCSV Output:")
     print((old_output).__class__)
     print("\nCSV Output complete:")
-    
+    print(csv_result)
     return csv_result
 
