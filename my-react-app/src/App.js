@@ -37,7 +37,7 @@ export default function AudioRecorder() {
   // Handler for optimizing: runs optimization scripts to add the processed prompt to the schedule
   const handleOptimzier = async () => {
     setIsOptimizing(true);
-    console.log("API_BASE_URL:", API_BASE_URL);
+    console.log("API_BASE_URL:", process.env.REACT_APP_API_URL);
 
     try {
         const response = await fetch(`${API_BASE_URL}/optimize`, {
@@ -52,28 +52,30 @@ export default function AudioRecorder() {
             throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
         }
 
-        // Get the JSON response
-        const data = await response.json();
-        console.log("Response Data:", data);
+        // Get the response as text (since it's a CSV)
+        const csvText = await response.text();
+        console.log("CSV Output:", csvText);
 
-        // Check if schedule exists
-        if (!data.schedule || !Array.isArray(data.schedule)) {
-            throw new Error("Invalid schedule format received");
-        }
+        // Parse CSV manually
+        const rows = csvText.trim().split("\n"); // Split by new line
+        const headers = rows[0].split(","); // First row is headers
+        const dataRows = rows.slice(1); // Remaining rows are data
 
-        // Convert response into table-friendly format
-        const rows = data.schedule.map((entry) => ({
-            scan_id: entry.scan_id,
-            scan_type: entry.scan_type,
-            duration: entry.duration,
-            priority: entry.priority,
-            patient_id: entry.patient_id,
-            check_in_date: entry.start_time ? entry.start_time.split(" ")[0] : "N/A", // Extract date
-            check_in_time: entry.start_time ? entry.start_time.split(" ")[1] : "N/A", // Extract time
-            unit: entry.machine || "Unknown",
-        }));
+        const parsedData = dataRows.map(row => {
+            const values = row.split(","); // Split each row by comma
+            return {
+                scan_id: values[0],
+                scan_type: values[1],
+                duration: values[2],
+                priority: values[3],
+                patient_id: values[4],
+                check_in_date: values[5],
+                check_in_time: values[6],
+                unit: "N/A"  // No machine info in CSV
+            };
+        });
 
-        setOutputData(rows);
+        setOutputData(parsedData);
         setShowPopup(true);
     } catch (error) {
         console.error("Optimization failed:", error);
@@ -82,6 +84,7 @@ export default function AudioRecorder() {
         setIsOptimizing(false);
     }
 };
+
 
 
   return (

@@ -6,6 +6,8 @@ import logging
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
+import io
+import csv
 import sys
 import uvicorn
 
@@ -72,11 +74,17 @@ def optimize_workflow(request: TranscriptionRequest):
 
         logging.info(f"Processed CSV Output:\n{processed_csv}")
 
-        # Convert CSV to structured format (list of dictionaries)
+        # Convert CSV string to list of dictionaries
         csv_reader = csv.DictReader(io.StringIO(processed_csv))
         processed_output = list(csv_reader)
 
-        # Optimize workflow
+        # Validate processed_output contains necessary keys
+        required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
+        for entry in processed_output:
+            if not required_keys.issubset(entry.keys()):
+                raise HTTPException(status_code=400, detail="Missing required fields in CSV data")
+
+        # Optimize workflow (assuming opt() is a function that processes this list)
         optimized_schedule = opt(processed_output)
         if not isinstance(optimized_schedule, list):
             raise HTTPException(status_code=500, detail="Optimization failed")
@@ -86,11 +94,13 @@ def optimize_workflow(request: TranscriptionRequest):
             {
                 "scan_id": entry["scan_id"],
                 "scan_type": entry["scan_type"],
-                "duration": entry["duration"],
-                "priority": entry["priority"],
-                "patient_id": entry["patient_id"],
-                "start_time": entry.get("start_time", ""),  # Handle missing fields
-                "machine": entry.get("machine", ""),
+                "duration": int(entry["duration"]),  # Convert to integer
+                "priority": int(entry["priority"]),  # Convert to integer
+                "patient_id": int(entry["patient_id"]),  # Convert to integer
+                "check_in_date": entry["check_in_date"],
+                "check_in_time": entry["check_in_time"],
+                "start_time": entry.get("start_time", ""),  # Default empty if missing
+                "machine": entry.get("machine", entry["scan_type"]),  # Assume machine is scan_type if missing
             }
             for entry in optimized_schedule
         ]
