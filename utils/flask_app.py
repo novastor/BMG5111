@@ -62,14 +62,14 @@ def schedule():
     return {"result": result}
 
 @app.post("/optimize")
-def optimize_workflow(request: TranscriptionRequest):
+def optimize_workflow():
     """Optimize the workflow based on transcribed input."""
     try:
-        request.transcription =  "the patient suffered an acute stroke with no further complications"
-        logging.info(f"Received transcription: {request.transcription}")
+        transcription =  "the patient suffered an acute stroke with no further complications"
+        logging.info(f"Received transcription: {transcription}")
         
         # Process the transcription (RAG returns a CSV string)
-        processed_csv = rag(index, request.transcription)
+        processed_csv = rag(index, transcription)
         if not processed_csv:
             raise HTTPException(status_code=400, detail="Processing failed")
 
