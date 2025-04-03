@@ -65,14 +65,16 @@ def optimize_workflow(request: TranscriptionRequest):
     try:
         logging.info(f"Received transcription: {request.transcription}")
 
-        # Process the transcription
-        processed_result = rag(index, request.transcription)
-        if not processed_result or "answer" not in processed_result:
+        # Process the transcription (RAG returns a CSV string)
+        processed_csv = rag(index, request.transcription)
+        if not processed_csv:
             raise HTTPException(status_code=400, detail="Processing failed")
 
-        # Extract processed output
-        processed_output = processed_result["answer"]
-        logging.info(f"Processed output: {processed_output}")
+        logging.info(f"Processed CSV Output:\n{processed_csv}")
+
+        # Convert CSV to structured format (list of dictionaries)
+        csv_reader = csv.DictReader(io.StringIO(processed_csv))
+        processed_output = list(csv_reader)
 
         # Optimize workflow
         optimized_schedule = opt(processed_output)
@@ -87,8 +89,8 @@ def optimize_workflow(request: TranscriptionRequest):
                 "duration": entry["duration"],
                 "priority": entry["priority"],
                 "patient_id": entry["patient_id"],
-                "start_time": entry["start_time"],
-                "machine": entry["machine"],
+                "start_time": entry.get("start_time", ""),  # Handle missing fields
+                "machine": entry.get("machine", ""),
             }
             for entry in optimized_schedule
         ]
@@ -99,6 +101,7 @@ def optimize_workflow(request: TranscriptionRequest):
     except Exception as e:
         logging.error(f"Error in /optimize: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Run the FastAPI app
 if __name__ == '__main__':
