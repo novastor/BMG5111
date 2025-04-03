@@ -87,6 +87,9 @@ def optimize_workflow(request: TranscriptionRequest):
 
         # Optimize workflow by calling the external optimizer function
         optimized_schedule = opt(processed_output)
+        print("optimized output :")
+        print(optimized_schedule)
+        print("end of optimized output")
         if not isinstance(optimized_schedule, list):
             raise HTTPException(status_code=500, detail="Optimization failed")
 
