@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 # CORS Middleware (Allow requests from any frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to specific frontend URLs for security
+    allow_origins=["*"],  # Update with your frontend URL if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -50,32 +50,24 @@ async def schedule():
 
 
 @app.post("/optimize")
-async def optimizer():
-    """API endpoint to trigger optimization."""
-    if not link:
-        logging.error("API link not found in environment variables")
-        raise HTTPException(status_code=500, detail="API link not found in environment variables")
-
-    target = f"{link}/process"
-    logging.info(f"Constructed target URL: {target}")
-    
+async def optimize_workflow(transcription: str):
+    """Optimizes schedule using transcription without external process call."""
     try:
-        response = requests.post(target)
-        logging.info(f"Response status code: {response.status_code}")
-        logging.info(f"Response content: {response.text}")  # See full response
+        # Directly process the transcription instead of making an external request
+        processed_result = rag("scheduler-vectorised", transcription)
+        if not processed_result or "answer" not in processed_result:
+            raise HTTPException(status_code=400, detail="Processing failed")
 
-        if response.status_code != 200:
-            raise HTTPException(status_code=400, detail=f"Failed to get result from /process: {response.text}")
-        
-        response_json = response.json()
-        result = response_json.get("result")
-        logging.info(f"Extracted result: {result}")
+        # Extract processed output
+        processed_output = processed_result["answer"]
 
-        if not result:
-            raise HTTPException(status_code=400, detail="No result from /process")
+        # Optimize
+        optimized_schedule = opt(processed_output)
 
-        optimized_result = opt(result)
-        return {"schedule": optimized_result}
+        return {"schedule": optimized_schedule}
+
+    except Exception as e:
+        return {"error": str(e)}
     
     except Exception as e:
         logging.error(f"Error calling /process: {e}")
