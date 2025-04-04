@@ -1,7 +1,10 @@
 #!/bin/bash
 
-# Install dependencies
-#pip install -r requirements.txt
+# Start PulseAudio in system-wide mode with verbose output suppressed
+pulseaudio --verbose --exit-idle-time=-1 --system --disallow-exit -D > /dev/null 2>&1
 
-# Run Flask app using Gunicorn
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker flask_app:app
+# Optional: wait a moment for pulseaudio to fully start
+sleep 2
+
+# Start the Uvicorn server for the Flask app
+uvicorn flask_app:app --host 0.0.0.0 --port "${PORT:-8000}"
