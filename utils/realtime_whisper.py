@@ -41,7 +41,7 @@ def audio_processing():
         transcribes audio file using whisper-1, returns string with detected speech
         note: currently, as we are passign it a pre-existing string, this will always return the same thing, but if run locally will work properly
         """
-        buffer = audio_capture()
+        buffer = audio_mockup()
         print(buffer)
         # Check if the API key is provided as an environment variable
         load_dotenv()
