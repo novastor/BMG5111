@@ -65,12 +65,9 @@ def schedule():
 def optimize_workflow():
     """Optimize the workflow based on transcribed input."""
     try:
-        # First, get the transcription
-        transcription_response = record_and_transcribe()
-        transcription = transcription_response["transcription"]
-        
+        transcription =  "the patient suffered an acute stroke with no further complications"
         logging.info(f"Received transcription: {transcription}")
-
+        
         # Process the transcription (RAG returns a CSV string)
         processed_csv = rag(index, transcription)
         if not processed_csv:
@@ -79,32 +76,41 @@ def optimize_workflow():
         logging.info(f"Processed CSV Output:\n{processed_csv}")
 
         # Convert CSV string to list of dictionaries
-        processed_output = processed_csv
+        #csv_reader = csv.DictReader(io.StringIO(processed_csv))
+        processed_output = (processed_csv)
+        # Validate processed_output contains necessary keys
+       #required_keys = {"scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"}
+       #for entry in processed_output:
+       #    if not required_keys.issubset(entry.keys()):
+       #        raise HTTPException(status_code=400, detail="Missing required fields in CSV data")
 
-        # Optimize workflow
+        # Optimize workflow (assuming opt() is a function that processes this list)
         optimized_csv = opt(processed_output)
 
-        # Check if the result is a CSV string
+        # Check if the result is a CSV string (which is expected if .to_csv() is used)
         if isinstance(optimized_csv, str):
+            # Convert the CSV string back into a list of dictionaries
             csv_reader = csv.DictReader(io.StringIO(optimized_csv))
-            optimized_schedule = list(csv_reader)
+            optimized_schedule = (csv_reader)
         else:
+            # If it's not a CSV string, treat it as a list directly
             optimized_schedule = optimized_csv
+        print("i did it")
 
         # Validate & format schedule output
         formatted_schedule = [
             {
                 "scan_id": entry["scan_id"],
                 "scan_type": entry["scan_type"],
-                "duration": int(entry["duration"]),
-                "priority": int(entry["priority"]),
-                "patient_id": int(entry["patient_id"]),
-                "start_time": entry.get("start_time", ""),
-                "machine": entry.get("machine", entry["scan_type"]),
+                "duration": int(entry["duration"]),  # Convert to integer
+                "priority": int(entry["priority"]),  # Convert to integer
+                "patient_id": int(entry["patient_id"]),  # Convert to integer
+                "start_time": entry.get("start_time", ""),  # Default empty if missing
+                "machine": entry.get("machine", entry["scan_type"]),  # Assume machine is scan_type if missing
             }
             for entry in optimized_schedule
         ]
-        
+        print("formatted")
         logging.info(f"Optimized schedule: {formatted_schedule}")
         return {"schedule": formatted_schedule}
 
