@@ -42,6 +42,7 @@ def audio_processing():
         note: currently, as we are passign it a pre-existing string, this will always return the same thing, but if run locally will work properly
         """
         buffer = audio_capture()
+        print(buffer)
         # Check if the API key is provided as an environment variable
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
