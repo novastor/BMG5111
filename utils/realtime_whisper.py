@@ -9,25 +9,25 @@ import os
 '''
 this block is no longer is use, as the deployment is working with a pre-recorded input for the time being
 '''
-#def audio_capture():
-#    mic = sc.default_microphone()
+def audio_capture():
+    mic = sc.default_microphone()
 #    print(mic)
-#    rate = 32000
-#    seconds = 10
-#    frames = rate*seconds
-#    data = mic.record(samplerate=rate,numframes=frames)
-#    d16 = np.int16(data*32767)
-#    wav_buffer = io.BytesIO()
+    rate = 32000
+    seconds = 10
+    frames = rate*seconds
+    data = mic.record(samplerate=rate,numframes=frames)
+    d16 = np.int16(data*32767)
+    wav_buffer = io.BytesIO()
 #
-#    with wave.open(wav_buffer, 'wb') as wf:
-#        wf.setnchannels(2)
-#        wf.setsampwidth(2)
-#        wf.setframerate(32000)
-#        wf.writeframes(d16.tobytes())
-#    wav_buffer.name = "buffer.wav"
-#  # Reset buffer position
-#    #wav_buffer = convert_bytearray_to_wav_ndarray(wav_buffer)
-#    return wav_buffer
+    with wave.open(wav_buffer, 'wb') as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(32000)
+        wf.writeframes(d16.tobytes())
+    wav_buffer.name = "buffer.wav"
+  # Reset buffer position
+    wav_buffer = convert_bytearray_to_wav_ndarray(wav_buffer)
+    return wav_buffer
 def audio_mockup():
     '''
     this is a method used to run during demos, as the web hosting seems to break when trying to run pulseaudio(known issue?)
@@ -41,7 +41,7 @@ def audio_processing():
         transcribes audio file using whisper-1, returns string with detected speech
         note: currently, as we are passign it a pre-existing string, this will always return the same thing, but if run locally will work properly
         """
-        buffer = audio_mockup()
+        buffer = audio_capture()
         # Check if the API key is provided as an environment variable
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
