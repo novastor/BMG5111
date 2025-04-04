@@ -84,7 +84,7 @@ export default function AudioRecorder() {
     <div className="container">
       {/* Navigation Bar */}
       <header className="navbar">
-        <h1>Welcome to the Medical Imaging Optimization Suite</h1>
+        <h1>Welcome to the Medical Triaging Optimization System</h1>
       </header>
 
       {/* Main Content */}
