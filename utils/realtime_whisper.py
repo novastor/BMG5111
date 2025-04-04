@@ -2,7 +2,7 @@
 from openai import OpenAI
 import wave
 import io
-#import soundcard as sc
+import soundcard as sc
 import numpy as np
 from dotenv import load_dotenv
 import os
