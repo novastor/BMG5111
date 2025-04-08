@@ -13,6 +13,7 @@ import csv
 import sys
 import uvicorn
 from pydub import AudioSegment
+g_ts = None
 # Global variables
 index = 'scheduler-vectorised'
 app = FastAPI()
@@ -70,6 +71,7 @@ def record_and_transcribe(file: UploadFile = File(...)):
     # You can now use the wav_buffer as a file object (it’s in-memory)
     wav_buffer.seek(0)  # Rewind the buffer to the beginning
     transcription = ts(wav_buffer)  
+    g_ts = transcription
     return {"transcription": transcription}
 
 @app.post("/process")
@@ -84,6 +86,7 @@ def optimize_workflow():
     """Optimize the workflow based on transcribed input."""
     try:
         transcription =  "the patient suffered an acute stroke with no further complications"
+        transcription = g_ts
         logging.info(f"Received transcription: {transcription}")
         
         # Process the transcription (RAG returns a CSV string)
