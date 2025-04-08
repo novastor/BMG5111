@@ -9,121 +9,88 @@ console.log(API_BASE_URL);
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [outputData, setOutputData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
-  const [audioURL, setAudioURL] = useState("");
-  const [audioBlob, setAudioBlob] = useState(null);
 
-  const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const recognitionRef = useRef(null); // 👈 Added this
+  const mediaRecorderRef = useRef(null); // Reference to the MediaRecorder
+  const streamRef = useRef(null); // Reference to the MediaStream
+
+  // SpeechRecognition API (Web Speech API)
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
 
   const startRecording = async () => {
-    try {
-      setIsRecording(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      const chunks = [];
+    setIsRecording(true);
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    streamRef.current = stream; // Store the stream reference
+    const recorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = recorder; // Store the recorder reference
+    const chunks = [];
 
-      recorder.ondataavailable = (event) => {
-        chunks.push(event.data);
-      };
+    recorder.ondataavailable = (event) => {
+      chunks.push(event.data);
+    };
 
-      recorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        setAudioBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioURL(url);
-        setIsRecording(false);
-
-        // Initialize recognition only if available
-        const SpeechRecognition =
-          window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (SpeechRecognition) {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-
-          recognition.onresult = (event) => {
-            let finalTranscript = "";
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-              }
-            }
-            setTranscription(finalTranscript);
-          };
-
-          recognition.onerror = (event) => {
-            console.error("SpeechRecognition error", event.error);
-            setIsRecording(false);
-          };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-        } else {
-          alert("Speech Recognition not supported in this browser.");
-        }
-      };
-
-      recorder.start();
-    } catch (err) {
-      console.error("Error starting recording:", err);
-      alert("Failed to access the microphone.");
+    recorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      const url = URL.createObjectURL(blob);
       setIsRecording(false);
-    }
+
+      // Now, we start SpeechRecognition to transcribe
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        let finalTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        setTranscription(finalTranscript); // Set transcription
+        optimizeTranscription(finalTranscript); // Automatically optimize after transcription
+      };
+
+      recognition.onerror = (event) => {
+        console.error("SpeechRecognition error", event.error);
+        setIsRecording(false);
+      };
+    };
+
+    recorder.start();
   };
 
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     const stream = streamRef.current;
-    const recognition = recognitionRef.current;
 
     if (recorder && recorder.state !== "inactive") {
       recorder.stop();
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    }
+      stream.getTracks().forEach((track) => track.stop()); // Stop the stream tracks correctly
+      setIsRecording(false);
 
-    if (recognition) {
+      // Stop the recognition process as well
       recognition.stop();
     }
-
-    setIsRecording(false);
   };
 
   const deleteAudio = () => {
-    setAudioURL("");
-    setAudioBlob(null);
+    setTranscription(""); // Clear transcription on delete
   };
 
-  // Handler for processing the transcription
-  const handleProcessing = async () => {
-    setIsProcessing(true);
-    const response = await fetch(`${API_BASE_URL}/process`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcription }),
-    });
-    await response.json();
-    setIsProcessing(false);
-  };
+  const optimizeTranscription = async (transcription) => {
+    if (!transcription) return;
 
-  // Handler for optimizing: runs optimization scripts to add the processed prompt to the schedule
-  const handleOptimzier = async () => {
     setIsOptimizing(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcription }), // Ensure JSON format
+        body: JSON.stringify({ transcription }), // Send transcription to backend for optimization
       });
 
       if (!response.ok) {
@@ -132,7 +99,7 @@ export default function AudioRecorder() {
       }
 
       const data = await response.json();
-      console.log("Response Data:", data);
+      console.log("Optimization response data:", data);
 
       const rows = data.schedule.map((entry) => ({
         scan_id: entry.scan_id,
@@ -146,7 +113,7 @@ export default function AudioRecorder() {
       }));
 
       setOutputData(rows);
-      setShowPopup(true);
+      setShowPopup(true); // Show the popup with the optimized schedule
     } catch (error) {
       console.error("Optimization failed:", error);
       alert(`Optimization failed: ${error.message}`);
@@ -157,16 +124,13 @@ export default function AudioRecorder() {
 
   return (
     <div className="container">
-      {/* Navigation Bar */}
       <header className="navbar">
         <h1>Welcome to the Medical Triaging Optimization System</h1>
       </header>
 
-      {/* Main Content */}
       <main className="content">
         <p>Please press the buttons below to record and process your voice input.</p>
 
-        {/* Action Buttons */}
         <div className="button-container">
           <button onClick={startRecording} disabled={isRecording} className="btn btn-record">
             <FaMicrophone /> {isRecording ? "Recording..." : "Start Recording"}
@@ -175,13 +139,7 @@ export default function AudioRecorder() {
             <FaStop /> {isRecording ? "Stop Recording" : "Recording..."}
           </button>
           <button onClick={deleteAudio} disabled={isRecording} className="btn btn-abort">
-            <FaTrash /> {isRecording ? "Recording..." : "Clear Recording"}
-          </button>
-          <button onClick={handleProcessing} disabled={isProcessing} className="btn btn-process">
-            <FaPlay /> {isProcessing ? "Processing..." : "Run Processing"}
-          </button>
-          <button onClick={handleOptimzier} disabled={isOptimizing} className="btn btn-process">
-            <FaPlay /> {isOptimizing ? "Optimizing..." : "Run Optimizer"}
+            <FaTrash /> Clear
           </button>
         </div>
       </main>

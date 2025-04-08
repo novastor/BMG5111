@@ -91,7 +91,7 @@ def optimize_workflow():
     """Optimize the workflow based on transcribed input."""
     try:
         transcription =  "the patient suffered an acute stroke with no further complications"
-        #transcription = g_ts
+        transcription = g_ts
         print("transcription:")
         print(transcription)
         logging.info(f"Received transcription: {transcription}")
