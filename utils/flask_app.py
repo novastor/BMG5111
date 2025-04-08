@@ -1,4 +1,5 @@
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import  FastAPI, UploadFile, File
 from stateful_scheduling import search_with_rag as rag
 from realtime_whisper import audio_processing as ts
 from main import do_optimization as opt
@@ -7,10 +8,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
 import io
+from io import BytesIO
 import csv
 import sys
 import uvicorn
-
+from pydub import AudioSegment
 # Global variables
 index = 'scheduler-vectorised'
 app = FastAPI()
@@ -49,9 +51,25 @@ def home():
     return {"message": "FastAPI is running on Heroku/Render!"}
 
 @app.post("/record")
-def record_and_transcribe():
+def record_and_transcribe(file: UploadFile = File(...)):
     """API endpoint to trigger recording and transcription."""
-    transcription = ts()  
+    audio_data =  file.read()
+
+    # Convert audio data into a buffer (in-memory)
+    audio_buffer = BytesIO(audio_data)
+
+    # If the audio format is webm (or any other type), use pydub to convert it to a WAV file
+    # Assuming the input is in "audio/webm" format (can be changed depending on actual format)
+    audio = AudioSegment.from_file(audio_buffer, format="webm")
+
+    # Now audio is an AudioSegment object; you can process it further
+    # For example, convert it to WAV
+    wav_buffer = BytesIO()
+    audio.export(wav_buffer, format="wav")
+
+    # You can now use the wav_buffer as a file object (it’s in-memory)
+    wav_buffer.seek(0)  # Rewind the buffer to the beginning
+    transcription = ts(wav_buffer)  
     return {"transcription": transcription}
 
 @app.post("/process")

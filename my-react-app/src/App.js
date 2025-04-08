@@ -1,13 +1,11 @@
-import React, { useState } from "react";
-import {MediaRecorder, register} from 'extendable-media-recorder';
-import {connect} from 'extendable-media-recorder-wav-encoder';
-import { FaMicrophone, FaStop, FaTrash } from "react-icons/fa";
+import React, { useState, useRef } from "react";
+import { FaMicrophone, FaStop, FaTrash, FaPlay, FaTimes } from "react-icons/fa";
 import "./styles.css"; // Import the CSS file
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
+console.log(API_BASE_URL);
 
-console.log(API_BASE_URL)
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -16,17 +14,18 @@ export default function AudioRecorder() {
   const [outputData, setOutputData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [audioURL, setAudioURL] = useState("");
-  const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
+  
+  const mediaRecorderRef = useRef(null); // Reference to the MediaRecorder
+  const streamRef = useRef(null); // Reference to the MediaStream
+
   // Handler for recording audio
-
-  const audioRef = useRef();
-
   const startRecording = async () => {
     setIsRecording(true);
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    streamRef.current = stream; // Store the stream reference
     const recorder = new MediaRecorder(stream);
-
+    mediaRecorderRef.current = recorder; // Store the recorder reference
     const chunks = [];
 
     recorder.ondataavailable = (event) => {
@@ -39,21 +38,21 @@ export default function AudioRecorder() {
       const url = URL.createObjectURL(blob);
       setAudioURL(url);
       setIsRecording(false);
-    
+
       // Send the blob to the backend
       const formData = new FormData();
       formData.append("audio", blob, "recording.webm");
-    
+
       try {
-        const response = await fetch(`${API_BASE_URL}/upload-audio`, {
+        const response = await fetch(`${API_BASE_URL}/record`, {
           method: "POST",
           body: formData,
         });
-    
+
         if (!response.ok) {
           throw new Error("Failed to upload audio");
         }
-    
+
         const result = await response.json();
         console.log("Server response:", result);
       } catch (error) {
@@ -62,12 +61,15 @@ export default function AudioRecorder() {
     };
 
     recorder.start();
-    setMediaRecorder(recorder);
   };
+
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+    const recorder = mediaRecorderRef.current;
+    const stream = streamRef.current;
+
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+      stream.getTracks().forEach((track) => track.stop()); // Stop the stream tracks correctly
       setIsRecording(false);
     }
   };
@@ -76,10 +78,10 @@ export default function AudioRecorder() {
     setAudioURL("");
     setAudioBlob(null);
   };
+
   // Handler for processing the transcription (obsolete, now part of optimizer but kept since removing it breaks the optimizer)
   const handleProcessing = async () => {
     setIsProcessing(true);
-    console.log("API_BASE_URL at render:", process.env.REACT_APP_API_URL);
     const response = await fetch(`${API_BASE_URL}/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,26 +94,22 @@ export default function AudioRecorder() {
   // Handler for optimizing: runs optimization scripts to add the processed prompt to the schedule
   const handleOptimzier = async () => {
     setIsOptimizing(true);
-    console.log("API_BASE_URL:", process.env.REACT_APP_API_URL);
-  
+
     try {
       const response = await fetch(`${API_BASE_URL}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcription }), // Ensure JSON format
       });
-  
-      // Handle HTTP errors
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
       }
-  
-      // Get the JSON response
+
       const data = await response.json();
       console.log("Response Data:", data);
-      
-      // Map response properly using check_in_date and check_in_time if available.
+
       const rows = data.schedule.map((entry) => ({
         scan_id: entry.scan_id,
         scan_type: entry.scan_type,
@@ -122,7 +120,7 @@ export default function AudioRecorder() {
         check_in_time: entry.check_in_time || (entry.start_time ? entry.start_time.split(" ")[1] : "N/A"),
         unit: entry.machine || "Unknown",
       }));
-  
+
       setOutputData(rows);
       setShowPopup(true);
     } catch (error) {
@@ -132,8 +130,6 @@ export default function AudioRecorder() {
       setIsOptimizing(false);
     }
   };
-
-
 
   return (
     <div className="container">
@@ -151,11 +147,11 @@ export default function AudioRecorder() {
           <button onClick={startRecording} disabled={isRecording} className="btn btn-record">
             <FaMicrophone /> {isRecording ? "Recording..." : "Start Recording"}
           </button>
-          <button onClick={stopRecording} disabled={isRecording} className="btn btn-record">
-            <FaStop /> {isRecording ? "Recording..." : "Stop Recording"}
+          <button onClick={stopRecording} disabled={!isRecording} className="btn btn-rec-stop">
+            <FaStop /> {isRecording ? "Stop Recording" : "Recording..."}
           </button>
-          <button onClick={deleteAudio} disabled={isRecording} className="btn btn-record">
-            <FaTrash /> {isRecording ? "Recording..." : "Start Recording"}
+          <button onClick={deleteAudio} disabled={isRecording} className="btn btn-abort">
+            <FaTrash /> {isRecording ? "Recording..." : "Clear Recording"}
           </button>
           <button onClick={handleProcessing} disabled={isProcessing} className="btn btn-process">
             <FaPlay /> {isProcessing ? "Processing..." : "Run Processing"}
@@ -168,55 +164,54 @@ export default function AudioRecorder() {
 
       {/* Popup Table for Output */}
       {showPopup && outputData && (
-  <div className="popup">
-    <div className="popup-content">
-      <div className="popup-header">
-        <h2>Schedule Preview</h2>
-        <button onClick={() => setShowPopup(false)} className="close-btn">
-          <FaTimes />
-        </button>
-      </div>
-      <p>Displaying request information. Please verify all data is correct.</p>
-      <table>
-        <thead>
-          <tr>
-            <th>Scan ID</th>
-            <th>Scan Type</th>
-            <th>Duration</th>
-            <th>Priority</th>
-            <th>Patient ID</th>
-            <th>Check In Date</th>
-            <th>Check In Time</th>
-            <th>Unit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {outputData.map((row, index) => (
-            <tr key={index}>
-              <td>{row.scan_id}</td>
-              <td>{row.scan_type}</td>
-              <td>{row.duration}</td>
-              <td>{row.priority}</td>
-              <td>{row.patient_id}</td>
-              <td>{row.check_in_date}</td>
-              <td>{row.check_in_time}</td>
-              <td>{row.unit}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="button-container">
-        <button onClick={() => setShowPopup(false)} className="btn btn-close">
-          Close
-        </button>
-        <button onClick={() => setShowPopup(false)} className="btn btn-commit">
-          Commit
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+        <div className="popup">
+          <div className="popup-content">
+            <div className="popup-header">
+              <h2>Schedule Preview</h2>
+              <button onClick={() => setShowPopup(false)} className="close-btn">
+                <FaTimes />
+              </button>
+            </div>
+            <p>Displaying request information. Please verify all data is correct.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Scan ID</th>
+                  <th>Scan Type</th>
+                  <th>Duration</th>
+                  <th>Priority</th>
+                  <th>Patient ID</th>
+                  <th>Check In Date</th>
+                  <th>Check In Time</th>
+                  <th>Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {outputData.map((row, index) => (
+                  <tr key={index}>
+                    <td>{row.scan_id}</td>
+                    <td>{row.scan_type}</td>
+                    <td>{row.duration}</td>
+                    <td>{row.priority}</td>
+                    <td>{row.patient_id}</td>
+                    <td>{row.check_in_date}</td>
+                    <td>{row.check_in_time}</td>
+                    <td>{row.unit}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="button-container">
+              <button onClick={() => setShowPopup(false)} className="btn btn-close">
+                Close
+              </button>
+              <button onClick={() => setShowPopup(false)} className="btn btn-commit">
+                Commit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

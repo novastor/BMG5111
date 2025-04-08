@@ -36,12 +36,12 @@ def audio_mockup():
     mockup.write("the patient suffered an acute stroke with no further complications")
     mockup.seek(0)
     return mockup
-def audio_processing():
+def audio_processing(buffer):
         """
         transcribes audio file using whisper-1, returns string with detected speech
         note: currently, as we are passign it a pre-existing string, this will always return the same thing, but if run locally will work properly
         """
-        buffer = audio_mockup()
+        #buffer = audio_mockup()
         print(buffer)
         # Check if the API key is provided as an environment variable
         load_dotenv()

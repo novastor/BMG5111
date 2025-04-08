@@ -99,7 +99,24 @@ body {
 .btn-commit:hover {
   background: #70d2ffa8;
 }
+.btn-rec-stop {
+  background: #e2363668;
+  color: white;
+}
 
+.btn-rec-stop:hover {
+  background: #e2363694;
+  transform: scale(1.05);
+}
+.btn-abort {
+  background: #e2df36be;
+  color: white;
+}
+
+.btn-abort:hover {
+  background: #9b9924be;
+  transform: scale(1.05);
+}
 /* Popup Modal */
 .popup {
   position: fixed;
