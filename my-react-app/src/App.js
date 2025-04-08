@@ -16,69 +16,86 @@ export default function AudioRecorder() {
   const [audioURL, setAudioURL] = useState("");
   const [audioBlob, setAudioBlob] = useState(null);
 
-  const mediaRecorderRef = useRef(null); // Reference to the MediaRecorder
-  const streamRef = useRef(null); // Reference to the MediaStream
-
-  // SpeechRecognition API (Web Speech API)
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const recognitionRef = useRef(null); // 👈 Added this
 
   const startRecording = async () => {
-    setIsRecording(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    streamRef.current = stream; // Store the stream reference
-    const recorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = recorder; // Store the recorder reference
-    const chunks = [];
+    try {
+      setIsRecording(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      const chunks = [];
 
-    recorder.ondataavailable = (event) => {
-      chunks.push(event.data);
-    };
-
-    recorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: "audio/webm" });
-      setAudioBlob(blob);
-      const url = URL.createObjectURL(blob);
-      setAudioURL(url);
-      setIsRecording(false);
-
-      // Start the SpeechRecognition for transcription
-      recognition.start();
-
-      recognition.onresult = (event) => {
-        let finalTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
-        }
-        setTranscription(finalTranscript); // Set transcription
+      recorder.ondataavailable = (event) => {
+        chunks.push(event.data);
       };
 
-      recognition.onerror = (event) => {
-        console.error("SpeechRecognition error", event.error);
+      recorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        setAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setAudioURL(url);
         setIsRecording(false);
-      };
-    };
 
-    recorder.start();
+        // Initialize recognition only if available
+        const SpeechRecognition =
+          window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+
+          recognition.onresult = (event) => {
+            let finalTranscript = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              }
+            }
+            setTranscription(finalTranscript);
+          };
+
+          recognition.onerror = (event) => {
+            console.error("SpeechRecognition error", event.error);
+            setIsRecording(false);
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+        } else {
+          alert("Speech Recognition not supported in this browser.");
+        }
+      };
+
+      recorder.start();
+    } catch (err) {
+      console.error("Error starting recording:", err);
+      alert("Failed to access the microphone.");
+      setIsRecording(false);
+    }
   };
 
   const stopRecording = () => {
     const recorder = mediaRecorderRef.current;
     const stream = streamRef.current;
+    const recognition = recognitionRef.current;
 
     if (recorder && recorder.state !== "inactive") {
       recorder.stop();
-      stream.getTracks().forEach((track) => track.stop()); // Stop the stream tracks correctly
-      setIsRecording(false);
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    }
 
-      // Stop the recognition process as well
+    if (recognition) {
       recognition.stop();
     }
+
+    setIsRecording(false);
   };
 
   const deleteAudio = () => {
