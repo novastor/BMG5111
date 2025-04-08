@@ -55,8 +55,10 @@ def home():
 def record_and_transcribe(file: UploadFile = File(...)):
     """API endpoint to trigger recording and transcription."""
     audio_data =  file.read()
-
+    print("Received audio data:", audio_data[:100])  # Print the first 100 bytes for debugging
     # Convert audio data into a buffer (in-memory)
+    if not audio_data:
+     raise HTTPException(status_code=400, detail="No audio data received")
     audio_buffer = BytesIO(audio_data)
 
     # If the audio format is webm (or any other type), use pydub to convert it to a WAV file
@@ -70,8 +72,11 @@ def record_and_transcribe(file: UploadFile = File(...)):
 
     # You can now use the wav_buffer as a file object (it’s in-memory)
     wav_buffer.seek(0)  # Rewind the buffer to the beginning
+    print("got rec!!")
     transcription = ts(wav_buffer)  
     g_ts = transcription
+    print("got transcription!!")
+    print(transcription)
     return {"transcription": transcription}
 
 @app.post("/process")
@@ -86,7 +91,7 @@ def optimize_workflow():
     """Optimize the workflow based on transcribed input."""
     try:
         transcription =  "the patient suffered an acute stroke with no further complications"
-        transcription = g_ts
+        #transcription = g_ts
         print("transcription:")
         print(transcription)
         logging.info(f"Received transcription: {transcription}")
