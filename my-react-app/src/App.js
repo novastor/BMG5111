@@ -1,8 +1,12 @@
 import React, { useState } from "react";
-import { FaMicrophone, FaPlay, FaTimes } from "react-icons/fa";
+import {MediaRecorder, register} from 'extendable-media-recorder';
+import {connect} from 'extendable-media-recorder-wav-encoder';
+import { FaMicrophone, FaStop, FaTrash } from "react-icons/fa";
 import "./styles.css"; // Import the CSS file
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
+
+
 console.log(API_BASE_URL)
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -11,16 +15,67 @@ export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");
   const [outputData, setOutputData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
-
+  const [audioURL, setAudioURL] = useState("");
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
   // Handler for recording audio
-  const handleRecording = async () => {
+
+  const audioRef = useRef();
+
+  const startRecording = async () => {
     setIsRecording(true);
-    const response = await fetch(`${API_BASE_URL}/record`, { method: "POST" });
-    const data = await response.json();
-    setTranscription(data.transcription);
-    setIsRecording(false);
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+
+    const chunks = [];
+
+    recorder.ondataavailable = (event) => {
+      chunks.push(event.data);
+    };
+
+    recorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: "audio/webm" });
+      setAudioBlob(blob);
+      const url = URL.createObjectURL(blob);
+      setAudioURL(url);
+      setIsRecording(false);
+    
+      // Send the blob to the backend
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
+    
+      try {
+        const response = await fetch(`${API_BASE_URL}/upload-audio`, {
+          method: "POST",
+          body: formData,
+        });
+    
+        if (!response.ok) {
+          throw new Error("Failed to upload audio");
+        }
+    
+        const result = await response.json();
+        console.log("Server response:", result);
+      } catch (error) {
+        console.error("Error uploading audio:", error);
+      }
+    };
+
+    recorder.start();
+    setMediaRecorder(recorder);
+  };
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach((track) => track.stop());
+      setIsRecording(false);
+    }
   };
 
+  const deleteAudio = () => {
+    setAudioURL("");
+    setAudioBlob(null);
+  };
   // Handler for processing the transcription (obsolete, now part of optimizer but kept since removing it breaks the optimizer)
   const handleProcessing = async () => {
     setIsProcessing(true);
@@ -93,8 +148,14 @@ export default function AudioRecorder() {
 
         {/* Action Buttons */}
         <div className="button-container">
-          <button onClick={handleRecording} disabled={isRecording} className="btn btn-record">
+          <button onClick={startRecording} disabled={isRecording} className="btn btn-record">
             <FaMicrophone /> {isRecording ? "Recording..." : "Start Recording"}
+          </button>
+          <button onClick={stopRecording} disabled={isRecording} className="btn btn-record">
+            <FaStop /> {isRecording ? "Recording..." : "Stop Recording"}
+          </button>
+          <button onClick={deleteAudio} disabled={isRecording} className="btn btn-record">
+            <FaTrash /> {isRecording ? "Recording..." : "Start Recording"}
           </button>
           <button onClick={handleProcessing} disabled={isProcessing} className="btn btn-process">
             <FaPlay /> {isProcessing ? "Processing..." : "Run Processing"}
