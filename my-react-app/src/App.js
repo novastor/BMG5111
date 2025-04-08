@@ -1,122 +1,115 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone, FaStop, FaTrash, FaPlay, FaTimes } from "react-icons/fa";
-import "./styles.css"; // Import the CSS file
+import "./styles.css";
 
-const API_BASE_URL = process.env.REACT_APP_API_URL;
-
-console.log(API_BASE_URL);
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [outputData, setOutputData] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [showPopup, setShowPopup] = useState(false);
 
-  const mediaRecorderRef = useRef(null); // Reference to the MediaRecorder
-  const streamRef = useRef(null); // Reference to the MediaStream
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
 
-  // SpeechRecognition API (Web Speech API)
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
+  // Start recording using MediaRecorder
   const startRecording = async () => {
-    setIsRecording(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    streamRef.current = stream; // Store the stream reference
-    const recorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = recorder; // Store the recorder reference
-    const chunks = [];
+    setErrorMessage("");
+    setTranscription(""); // clear any previous transcript
+    try {
+      setIsRecording(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      const chunks = [];
 
-    recorder.ondataavailable = (event) => {
-      chunks.push(event.data);
-    };
-
-    recorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: "audio/webm" });
-      const url = URL.createObjectURL(blob);
-      setIsRecording(false);
-
-      // Now, we start SpeechRecognition to transcribe
-      recognition.start();
-
-      recognition.onresult = (event) => {
-        let finalTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          }
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
         }
-        setTranscription(finalTranscript); // Set transcription
-        optimizeTranscription(finalTranscript); // Automatically optimize after transcription
       };
 
-      recognition.onerror = (event) => {
-        console.error("SpeechRecognition error", event.error);
+      recorder.onstop = async () => {
         setIsRecording(false);
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        console.log("Recorded audio blob:", blob);
+
+        // Upload the recorded audio blob to the /record endpoint.
+        const formData = new FormData();
+        formData.append("file", blob, "recording.webm");
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/record`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error: status ${response.status}`);
+          }
+          const result = await response.json();
+          console.log("Transcription received:", result.transcription);
+          // Store the actual transcript returned by the backend.
+          setTranscription(result.transcription);
+        } catch (error) {
+          console.error("Error uploading audio:", error);
+          setErrorMessage("Error uploading audio: " + error.message);
+        }
       };
-    };
 
-    recorder.start();
-  };
-
-  const stopRecording = () => {
-    const recorder = mediaRecorderRef.current;
-    const stream = streamRef.current;
-
-    if (recorder && recorder.state !== "inactive") {
-      recorder.stop();
-      stream.getTracks().forEach((track) => track.stop()); // Stop the stream tracks correctly
+      recorder.start();
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      setErrorMessage("Error accessing microphone: " + error.message);
       setIsRecording(false);
-
-      // Stop the recognition process as well
-      recognition.stop();
     }
   };
 
-  const deleteAudio = () => {
-    setTranscription(""); // Clear transcription on delete
+  // Stop recording and release media resources.
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      setIsRecording(false);
+    }
   };
 
-  const optimizeTranscription = async (transcription) => {
-    if (!transcription) return;
+  // Delete the displayed transcription and any output.
+  const deleteAudio = () => {
+    setTranscription("");
+    setOutputData(null);
+    setErrorMessage("");
+  };
 
+  // Send the transcription to the backend to optimize the workflow.
+  const handleOptimize = async () => {
+    if (!transcription) {
+      setErrorMessage("No transcription available for optimization.");
+      return;
+    }
+    setErrorMessage("");
     setIsOptimizing(true);
-
     try {
       const response = await fetch(`${API_BASE_URL}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcription }), // Send transcription to backend for optimization
+        body: JSON.stringify({ transcription }),
       });
-
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
+        throw new Error(`HTTP error: status ${response.status}`);
       }
-
       const data = await response.json();
-      console.log("Optimization response data:", data);
-
-      const rows = data.schedule.map((entry) => ({
-        scan_id: entry.scan_id,
-        scan_type: entry.scan_type,
-        duration: entry.duration,
-        priority: entry.priority,
-        patient_id: entry.patient_id,
-        check_in_date: entry.check_in_date || (entry.start_time ? entry.start_time.split(" ")[0] : "N/A"),
-        check_in_time: entry.check_in_time || (entry.start_time ? entry.start_time.split(" ")[1] : "N/A"),
-        unit: entry.machine || "Unknown",
-      }));
-
-      setOutputData(rows);
-      setShowPopup(true); // Show the popup with the optimized schedule
+      console.log("Optimization response:", data.schedule);
+      setOutputData(data.schedule);
+      setShowPopup(true);
     } catch (error) {
-      console.error("Optimization failed:", error);
-      alert(`Optimization failed: ${error.message}`);
+      console.error("Optimization error:", error);
+      setErrorMessage("Optimization failed: " + error.message);
     } finally {
       setIsOptimizing(false);
     }
@@ -125,26 +118,41 @@ export default function AudioRecorder() {
   return (
     <div className="container">
       <header className="navbar">
-        <h1>Welcome to the Medical Triaging Optimization System</h1>
+        <h1>Medical Triaging Optimization System</h1>
       </header>
 
       <main className="content">
-        <p>Please press the buttons below to record and process your voice input.</p>
-
+        <p>
+          Please record your voice input to generate a transcript. Once the transcript appears, you can optimize it.
+        </p>
+        {errorMessage && <p className="error">{errorMessage}</p>}
         <div className="button-container">
           <button onClick={startRecording} disabled={isRecording} className="btn btn-record">
             <FaMicrophone /> {isRecording ? "Recording..." : "Start Recording"}
           </button>
           <button onClick={stopRecording} disabled={!isRecording} className="btn btn-rec-stop">
-            <FaStop /> {isRecording ? "Stop Recording" : "Recording..."}
+            <FaStop /> Stop Recording
           </button>
-          <button onClick={deleteAudio} disabled={isRecording} className="btn btn-abort">
-            <FaTrash /> Clear
+          <button onClick={deleteAudio} disabled={!transcription} className="btn btn-abort">
+            <FaTrash /> Clear Transcript
+          </button>
+          <button
+            onClick={handleOptimize}
+            disabled={isOptimizing || !transcription}
+            className="btn btn-process"
+          >
+            <FaPlay /> {isOptimizing ? "Optimizing..." : "Optimize"}
           </button>
         </div>
+        {transcription && (
+          <div className="transcript-display">
+            <h3>Transcription:</h3>
+            <p>{transcription}</p>
+          </div>
+        )}
       </main>
 
-      {/* Popup Table for Output */}
+      {/* Popup for Optimized Schedule */}
       {showPopup && outputData && (
         <div className="popup">
           <div className="popup-content">
@@ -154,7 +162,7 @@ export default function AudioRecorder() {
                 <FaTimes />
               </button>
             </div>
-            <p>Displaying request information. Please verify all data is correct.</p>
+            <p>Below is the optimized schedule. Please verify the details.</p>
             <table>
               <thead>
                 <tr>
@@ -178,7 +186,7 @@ export default function AudioRecorder() {
                     <td>{row.patient_id}</td>
                     <td>{row.check_in_date}</td>
                     <td>{row.check_in_time}</td>
-                    <td>{row.unit}</td>
+                    <td>{row.machine}</td>
                   </tr>
                 ))}
               </tbody>
@@ -186,9 +194,6 @@ export default function AudioRecorder() {
             <div className="button-container">
               <button onClick={() => setShowPopup(false)} className="btn btn-close">
                 Close
-              </button>
-              <button onClick={() => setShowPopup(false)} className="btn btn-commit">
-                Commit
               </button>
             </div>
           </div>
