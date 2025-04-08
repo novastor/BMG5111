@@ -11,6 +11,16 @@ import csv
 import sys
 import uvicorn
 from pydub import AudioSegment
+import subprocess
+
+try:
+    ffmpeg_process = subprocess.run(
+        ["ffmpeg", "-version"], capture_output=True, text=True, check=True
+    )
+    ffmpeg_version = ffmpeg_process.stdout.splitlines()[0]  # Get the first line
+    print("FFmpeg Version:", ffmpeg_version)
+except Exception as e:
+    print("Failed to run FFmpeg:", e)
 
 # Global variable to store recorded transcript (for testing only)
 g_ts = None
