@@ -1,28 +1,23 @@
-from fastapi.middleware.cors import CORSMiddleware
+import os
+import sys
+import csv
+import io
+import subprocess
+import logging
+from io import BytesIO
+
+import uvicorn
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from pydub import AudioSegment
+
+# Import your processing functions
 from stateful_scheduling import search_with_rag as rag
 from realtime_whisper import audio_processing as ts
 from main import do_optimization as opt
-import logging
-from pydantic import BaseModel
-import os
-from io import BytesIO
-import csv
-import sys
-import uvicorn
-from pydub import AudioSegment
-import subprocess
 
-try:
-    ffmpeg_process = subprocess.run(
-        ["ffmpeg", "-version"], capture_output=True, text=True, check=True
-    )
-    ffmpeg_version = ffmpeg_process.stdout.splitlines()[0]  # Get the first line
-    print("FFmpeg Version:", ffmpeg_version)
-except Exception as e:
-    print("Failed to run FFmpeg:", e)
-
-# Global variable to store recorded transcript (for testing only)
+# Global variable to store transcription for testing only
 g_ts = None
 index = 'scheduler-vectorised'
 
@@ -30,27 +25,27 @@ app = FastAPI()
 sys.dont_write_bytecode = True
 logging.basicConfig(level=logging.INFO)
 
-# CORS Middleware (allow requests from any frontend)
+# CORS Middleware – Allow requests from any frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Modify with your frontend URL for production
+    allow_origins=["*"],  # Change this for production by specifying your frontend URL(s)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Request Model for /optimize (if you decide to send transcription in a payload)
+# Request model for /optimize (if you later want to pass transcription via payload)
 class TranscriptionRequest(BaseModel):
     transcription: str
 
-# Response Model for /optimize
+# Response model for /optimize
 class ScheduleEntry(BaseModel):
     scan_id: str
     scan_type: str
     duration: int
     priority: int
     patient_id: str
-    start_time: str  # "YYYY-MM-DD HH:MM:SS"
+    start_time: str  # e.g., "YYYY-MM-DD HH:MM:SS"
     machine: str
 
 class OptimizeResponse(BaseModel):
@@ -61,51 +56,63 @@ def home():
     """Health check route."""
     return {"message": "FastAPI is running on Heroku/Render!"}
 
+@app.get("/ffmpeg_version")
+def ffmpeg_version():
+    """Endpoint to check FFmpeg installation."""
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-version"], capture_output=True, text=True, check=True
+        )
+        version_info = result.stdout.splitlines()[0]
+        return {"ffmpeg_version": version_info}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FFmpeg check failed: {e}")
+
 @app.post("/record")
-def record_and_transcribe(file: UploadFile = File(...)):
-    """API endpoint to receive the audio recording, convert it to WAV, transcribe it, and store the transcript."""
-    # Read the uploaded audio data
-    audio_data = file.read()
+async def record_and_transcribe(file: UploadFile = File(...)):
+    """
+    Receives an audio file, converts it from WebM to WAV, transcribes it,
+    and stores the transcript globally (for testing).
+    """
+    # Await the asynchronous file read
+    audio_data = await file.read()
     if not audio_data:
         raise HTTPException(status_code=400, detail="No audio data received")
 
-    print("Received audio data (first 100 bytes):", audio_data[:100])
+    logging.info(f"Received audio data (first 100 bytes): {audio_data[:100]!r}")
 
-    # Create a buffer for in-memory audio processing
+    # Convert the audio data into a buffer (in-memory)
     audio_buffer = BytesIO(audio_data)
 
-    # Convert audio from WebM to WAV (adjust "webm" if needed)
+    # Convert from WebM to WAV (adjust format if necessary)
     try:
         audio = AudioSegment.from_file(audio_buffer, format="webm")
         wav_buffer = BytesIO()
         audio.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)  # Reset buffer pointer
-        logging.info("Audio conversion successful!")
+        wav_buffer.seek(0)
+        logging.info("Audio conversion successful.")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing audio file: {e}")
 
-    # Transcribe the WAV audio using the ts() function (ensure ts is working correctly)
+    # Transcribe the WAV buffer using your transcription function ts()
     transcription = ts(wav_buffer)
     if transcription is None:
-        raise HTTPException(status_code=500, detail="Transcription failed")
-
-    # Store the transcript in a global variable for testing/demo purposes
+        raise HTTPException(status_code=500, detail="Transcription failed.")
+    
     global g_ts
-    g_ts = transcription
-
+    g_ts = transcription  # Store transcription for testing/demo only.
     logging.info("Got transcription: " + str(transcription))
     return {"transcription": transcription}
 
 @app.post("/process")
 def process_transcription():
     """
-    API endpoint to process the recorded transcription using RAG.
+    Process the recorded transcription using RAG.
     Uses the transcript stored by /record.
     """
     global g_ts
     if not g_ts:
         raise HTTPException(status_code=400, detail="No recorded transcript found")
-    # Use the recorded transcript (g_ts) for processing
     result = rag(index, g_ts)
     return {"result": result}
 
@@ -113,32 +120,31 @@ def process_transcription():
 def optimize_workflow():
     """
     Optimize the workflow based on the recorded transcription.
-    The recorded transcript (from /record) is used rather than a hardcoded fake.
+    Uses the stored transcript rather than a hardcoded fake.
     """
     global g_ts
     if not g_ts:
         raise HTTPException(status_code=400, detail="No recorded transcript found")
 
     transcription = g_ts
-    logging.info(f"Received transcription: {transcription}")
+    logging.info(f"Received transcription for optimization: {transcription}")
     
-    # Process the transcription using RAG, which returns a CSV string
+    # Process the transcription using RAG (returns CSV string)
     processed_csv = rag(index, transcription)
     if not processed_csv:
         raise HTTPException(status_code=400, detail="Processing failed")
 
     logging.info(f"Processed CSV Output:\n{processed_csv}")
 
-    # Here, processed_csv is assumed to be a CSV string
-    # Convert CSV string into a list of dictionaries
+    # Convert CSV string to list of dictionaries.
     try:
-        csv_reader = csv.DictReader(BytesIO(processed_csv.encode('utf-8')).read().decode('utf-8').splitlines())
-        optimized_schedule = list(csv_reader)
+        csv_reader = csv.DictReader(io.StringIO(processed_csv))
+        processed_output = list(csv_reader)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error converting CSV: {e}")
 
-    # Optimize workflow using the opt() function
-    optimized_csv = opt(optimized_schedule)
+    # Optimize the workflow using opt()
+    optimized_csv = opt(processed_output)
     if isinstance(optimized_csv, str):
         try:
             csv_reader = csv.DictReader(io.StringIO(optimized_csv))
@@ -148,7 +154,7 @@ def optimize_workflow():
     else:
         optimized_schedule = optimized_csv
 
-    # Validate and format the schedule for the response
+    # Format the output schedule.
     try:
         formatted_schedule = [
             {
