@@ -87,6 +87,8 @@ def optimize_workflow():
     try:
         transcription =  "the patient suffered an acute stroke with no further complications"
         transcription = g_ts
+        print("transcription:")
+        print(transcription)
         logging.info(f"Received transcription: {transcription}")
         
         # Process the transcription (RAG returns a CSV string)
