@@ -15,11 +15,17 @@ export default function AudioRecorder() {
   const [showPopup, setShowPopup] = useState(false);
   const [audioURL, setAudioURL] = useState("");
   const [audioBlob, setAudioBlob] = useState(null);
-  
+
   const mediaRecorderRef = useRef(null); // Reference to the MediaRecorder
   const streamRef = useRef(null); // Reference to the MediaStream
 
-  // Handler for recording audio
+  // SpeechRecognition API (Web Speech API)
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
   const startRecording = async () => {
     setIsRecording(true);
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -39,25 +45,23 @@ export default function AudioRecorder() {
       setAudioURL(url);
       setIsRecording(false);
 
-      // Send the blob to the backend
-      const formData = new FormData();
-      formData.append("audio", blob, "recording.webm");
+      // Start the SpeechRecognition for transcription
+      recognition.start();
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/record`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to upload audio");
+      recognition.onresult = (event) => {
+        let finalTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
         }
+        setTranscription(finalTranscript); // Set transcription
+      };
 
-        const result = await response.json();
-        console.log("Server response:", result);
-      } catch (error) {
-        console.error("Error uploading audio:", error);
-      }
+      recognition.onerror = (event) => {
+        console.error("SpeechRecognition error", event.error);
+        setIsRecording(false);
+      };
     };
 
     recorder.start();
@@ -71,6 +75,9 @@ export default function AudioRecorder() {
       recorder.stop();
       stream.getTracks().forEach((track) => track.stop()); // Stop the stream tracks correctly
       setIsRecording(false);
+
+      // Stop the recognition process as well
+      recognition.stop();
     }
   };
 
@@ -79,7 +86,7 @@ export default function AudioRecorder() {
     setAudioBlob(null);
   };
 
-  // Handler for processing the transcription (obsolete, now part of optimizer but kept since removing it breaks the optimizer)
+  // Handler for processing the transcription
   const handleProcessing = async () => {
     setIsProcessing(true);
     const response = await fetch(`${API_BASE_URL}/process`, {
