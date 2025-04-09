@@ -41,10 +41,10 @@ export default function AudioRecorder() {
 
         // Convert the WebM blob to WAV using the Web Audio API and audio-buffer-to-wav
         setIsConverting(true);
-         try {
-           const formData = new FormData();
-           formData.append("file", blob, "recording.webm");
-         
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "recording.webm");
+
           try {
             const response = await fetch(`${API_BASE_URL}/record`, {
               method: "POST",
@@ -56,6 +56,14 @@ export default function AudioRecorder() {
             const result = await response.json();
             console.log("Transcription received:", result.transcription);
             setTranscription(result.transcription);
+
+            // Ensure outputData is set properly before showing the popup
+            if (result.schedule && Array.isArray(result.schedule)) {
+              setOutputData(result.schedule);
+              setShowPopup(true);
+            } else {
+              setErrorMessage("Received invalid schedule data.");
+            }
           } catch (uploadError) {
             console.error("Error uploading audio:", uploadError);
             setErrorMessage("Error uploading audio: " + uploadError.message);
@@ -158,7 +166,7 @@ export default function AudioRecorder() {
       </main>
 
       {/* Popup for Optimized Schedule */}
-      {showPopup && outputData && (
+      {showPopup && outputData && Array.isArray(outputData) && (
         <div className="popup">
           <div className="popup-content">
             <div className="popup-header">
