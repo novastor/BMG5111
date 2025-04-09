@@ -10,14 +10,12 @@ import uvicorn
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from pydub import AudioSegment
 
 # Import your processing functions
 from stateful_scheduling import search_with_rag as rag
 from realtime_whisper import audio_processing as ts
 from main import do_optimization as opt
 
-# Global variable to store transcription for testing purposes
 g_ts = None
 index = 'scheduler-vectorised'
 
@@ -25,10 +23,9 @@ app = FastAPI()
 sys.dont_write_bytecode = True
 logging.basicConfig(level=logging.INFO)
 
-# CORS Middleware – Allow requests from any frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://bmg5111-1.onrender.com"],  # Specify your frontend URL
+    allow_origins=["https://bmg5111-1.onrender.com"],  #had to specify here to fix cors issue, adjust as needed to match frontenend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,40 +42,25 @@ class ScheduleEntry(BaseModel):
     duration: int
     priority: int
     patient_id: str
-    start_time: str  # e.g., "YYYY-MM-DD HH:MM:SS"
+    start_time: str 
     machine: str
 
-class OptimizeResponse(BaseModel):
-    schedule: list[ScheduleEntry]
 
 @app.get("/")
-def home():
-    """Health check route."""
-    return {"message": "FastAPI is running on Heroku/Render!"}
 
-@app.get("/ffmpeg_version")
-def ffmpeg_version():
-    """Endpoint to check FFmpeg installation."""
-    try:
-        result = subprocess.run(
-            ["ffmpeg", "-version"], capture_output=True, text=True, check=True
-        )
-        version_info = result.stdout.splitlines()[0]
-        return {"ffmpeg_version": version_info}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"FFmpeg check failed: {e}")
+
 
 @app.post("/record")
-async def record_and_transcribe(file: UploadFile = File(...)):
+async def record_and_transcribe(file):
     audio_data = await file.read()
     if not audio_data:
         raise HTTPException(status_code=400, detail="No audio data received")
 
     try:
-        # Wrap the binary data in a BytesIO stream
+        #using buffer here to avoid having to save to database
         dat = BytesIO(audio_data)
         dat.seek(0)
-        # Get the full transcript from the transcription service
+        #generating transcript using method in realtime_whisper.py
         transcript = ts(dat, file.filename)
         # If transcript is a dict or object, extract the text (adjust based on your ts output)
         transcript_text = transcript.get("text") if isinstance(transcript, dict) else transcript.text
