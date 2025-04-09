@@ -36,13 +36,13 @@ def audio_mockup():
     mockup.write("the patient suffered an acute stroke with no further complications")
     mockup.seek(0)
     return mockup
-def audio_processing(buffer):
+def audio_processing(file_buffer, filename="audio.webm"):
         """
         transcribes audio file using whisper-1, returns string with detected speech
         note: currently, as we are passign it a pre-existing string, this will always return the same thing, but if run locally will work properly
         """
         #buffer = audio_mockup()
-        print(buffer)
+        print(file_buffer)
         # Check if the API key is provided as an environment variable
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
@@ -55,8 +55,7 @@ def audio_processing(buffer):
         # Open the audio file in binary read mode
         transcript = client.audio.transcriptions.create(
                 model="whisper-1",
-                file=buffer,response_format='text',language='en'
-            )
+                file=(filename, file_buffer, "audio/webm"))
         print(transcript)
         print("recording complete")
         return transcript

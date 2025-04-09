@@ -70,39 +70,18 @@ def ffmpeg_version():
 
 @app.post("/record")
 async def record_and_transcribe(file: UploadFile = File(...)):
-    """
-    Receives an audio file, converts it from WebM to WAV, transcribes it,
-    and stores the transcript globally (for testing).
-    """
-    # Await the asynchronous file read
     audio_data = await file.read()
     if not audio_data:
         raise HTTPException(status_code=400, detail="No audio data received")
-    
-    logging.info(f"Received audio data (first 100 bytes): {audio_data[:100]!r}")
 
-    # Convert the audio data into a buffer (in-memory)
-    audio_buffer = BytesIO(audio_data)
-
-    # Convert from WebM to WAV (adjust format if necessary)
     try:
-        audio = AudioSegment.from_file(audio_buffer, format="wav")
-        wav_buffer = BytesIO()
-        audio.export(wav_buffer, format="wav")
-        wav_buffer.seek(0)
-        logging.info("Audio conversion successful.")
+        # Pass the audio file directly to Whisper API
+        transcript = ts(BytesIO(audio_data), file.filename)
+        global g_ts
+        g_ts = transcript
+        return {"transcription": transcript}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error processing audio file: {e}")
-
-    # Transcribe the WAV buffer using your transcription function ts()
-    transcription = ts(wav_buffer)
-    if transcription is None:
-        raise HTTPException(status_code=500, detail="Transcription failed.")
-    
-    global g_ts
-    g_ts = transcription  # Store transcription for testing/demo only.
-    logging.info("Got transcription: " + str(transcription))
-    return {"transcription": transcription}
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
 
 @app.post("/process")
 def process_transcription():
