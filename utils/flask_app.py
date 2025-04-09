@@ -51,7 +51,8 @@ class ScheduleEntry(BaseModel):
 
 
 @app.post("/record")
-async def record_and_transcribe(file):
+async def record_and_transcribe(file: UploadFile = File(...)):
+    print("Received file:", file.filename)
     audio_data = await file.read()
     if not audio_data:
         raise HTTPException(status_code=400, detail="No audio data received")
