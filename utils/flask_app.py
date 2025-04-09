@@ -75,8 +75,11 @@ def record_and_transcribe(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="No audio data received")
 
     try:
+        dat = io.BytesIO()
+        dat.write(audio_data)
+        dat.seek(0)
         # Pass the audio file directly to Whisper API
-        transcript = ts(BytesIO(audio_data), file.filename)
+        transcript = ts(dat, file.filename)
         global g_ts
         g_ts = transcript
         return {"transcription": transcript}
