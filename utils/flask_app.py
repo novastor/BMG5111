@@ -70,10 +70,6 @@ def ffmpeg_version():
 
 @app.post("/record")
 async def record_and_transcribe(file: UploadFile = File(...)):
-    """
-    Receives an audio file from the frontend, processes it with the ts function,
-    and returns the resulting transcription.
-    """
     audio_data = await file.read()
     if not audio_data:
         raise HTTPException(status_code=400, detail="No audio data received")
@@ -82,12 +78,13 @@ async def record_and_transcribe(file: UploadFile = File(...)):
         # Wrap the binary data in a BytesIO stream
         dat = BytesIO(audio_data)
         dat.seek(0)
-        # Pass the audio file to the Whisper-based transcription function,
-        # along with the filename (which may be used for format-specific handling)
+        # Get the full transcript from the transcription service
         transcript = ts(dat, file.filename)
+        # If transcript is a dict or object, extract the text (adjust based on your ts output)
+        transcript_text = transcript.get("text") if isinstance(transcript, dict) else transcript.text
         global g_ts
-        g_ts = transcript  # store transcription globally for later endpoints
-        return {"transcription": transcript}
+        g_ts = transcript_text  # store transcription text globally for later endpoints
+        return {"transcription": transcript_text}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {e}")
 
