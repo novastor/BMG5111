@@ -1,213 +1,161 @@
-import React, { useState, useRef, useEffect } from "react";
-import { FaMicrophone, FaStop, FaTrash, FaPlay, FaTimes } from "react-icons/fa";
-import "./styles.css";
+import React, { useState } from "react";
+import { FaMicrophone, FaPlay, FaTimes } from "react-icons/fa";
+import "./styles.css"; // Import the CSS file
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
-
+console.log(API_BASE_URL)
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [outputData, setOutputData] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
   const [showPopup, setShowPopup] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
 
-  const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const audioChunksRef = useRef([]);
+  // Handler for recording audio
+  const handleRecording = async () => {
+    setIsRecording(true);
+    const response = await fetch(`${API_BASE_URL}/record`, { method: "POST" });
+    const data = await response.json();
+    setTranscription(data.transcription);
+    setIsRecording(false);
+  };
 
-  useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then(devices => {
-      devices.forEach(device => {
-        console.log(device.kind, device.label);
-      });
-    }).catch(err => {
-      console.error("Error enumerating devices:", err);
+  // Handler for processing the transcription (obsolete, now part of optimizer but kept since removing it breaks the optimizer)
+  const handleProcessing = async () => {
+    setIsProcessing(true);
+    console.log("API_BASE_URL at render:", process.env.REACT_APP_API_URL);
+    const response = await fetch(`${API_BASE_URL}/process`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcription }),
     });
-  }, []);
-
-  const startRecording = async () => {
-    setErrorMessage("");
-    setTranscription(""); // Clear any previous transcript
-    try {
-      setIsRecording(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        setIsRecording(false);
-        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        console.log("Recorded audio blob:", blob);
-
-        setIsConverting(true);
-        try {
-          const formData = new FormData();
-          formData.append("file", blob, "recording.webm");
-
-          const response = await fetch(`${API_BASE_URL}/record`, {
-            method: "POST",
-            body: formData,
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error: status ${response.status}`);
-          }
-          const result = await response.json();
-          console.log("Transcription received:", result.transcription);
-          setTranscription(result.transcription);
-        } catch (uploadError) {
-          console.error("Error uploading audio:", uploadError);
-          setErrorMessage("Error uploading audio: " + uploadError.message);
-        } finally {
-          setIsConverting(false);
-        }
-      };
-
-      recorder.start();
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      setErrorMessage("Error accessing microphone: " + error.message);
-      setIsRecording(false);
-    }
+    await response.json();
+    setIsProcessing(false);
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      setIsRecording(false);
-    }
-  };
-
-  const deleteAudio = () => {
-    setTranscription(""); // Clear the transcription
-    setOutputData(null);   // Clear any previous output data
-    setErrorMessage("");   // Clear any error messages
-  };
-
-  const handleOptimize = async () => {
-    if (!transcription) {
-      setErrorMessage("No transcription available for optimization.");
-      return;
-    }
-    setErrorMessage(""); // Clear any previous error
-    setIsOptimizing(true); // Show the loading state
+  // Handler for optimizing: runs optimization scripts to add the processed prompt to the schedule
+  const handleOptimzier = async () => {
+    setIsOptimizing(true);
+    console.log("API_BASE_URL:", process.env.REACT_APP_API_URL);
+  
     try {
       const response = await fetch(`${API_BASE_URL}/optimize`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ transcription }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcription }), // Ensure JSON format
       });
-
+  
+      // Handle HTTP errors
       if (!response.ok) {
-        throw new Error(`HTTP error: status ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorText}`);
       }
-      
+  
+      // Get the JSON response
       const data = await response.json();
-      console.log("Optimization response:", data.schedule);
-      setOutputData(data.schedule); // Set the output data to show the optimized result
-      setShowPopup(true); // Show the popup with the optimized schedule
-    } catch (optimizeError) {
-      console.error("Optimization error:", optimizeError);
-      setErrorMessage("Optimization failed: " + optimizeError.message); // Display an error if optimization fails
+      console.log("Response Data:", data);
+      
+      // Map response properly using check_in_date and check_in_time if available.
+      const rows = data.schedule.map((entry) => ({
+        scan_id: entry.scan_id,
+        scan_type: entry.scan_type,
+        duration: entry.duration,
+        priority: entry.priority,
+        patient_id: entry.patient_id,
+        check_in_date: entry.check_in_date || (entry.start_time ? entry.start_time.split(" ")[0] : "N/A"),
+        check_in_time: entry.check_in_time || (entry.start_time ? entry.start_time.split(" ")[1] : "N/A"),
+        unit: entry.machine || "Unknown",
+      }));
+  
+      setOutputData(rows);
+      setShowPopup(true);
+    } catch (error) {
+      console.error("Optimization failed:", error);
+      alert(`Optimization failed: ${error.message}`);
     } finally {
-      setIsOptimizing(false); // Hide the loading state after completion
+      setIsOptimizing(false);
     }
   };
 
+
+
   return (
     <div className="container">
+      {/* Navigation Bar */}
       <header className="navbar">
-        <h1>Medical Triaging Optimization System</h1>
+        <h1>Welcome to the Medical Triaging Optimization System</h1>
       </header>
 
+      {/* Main Content */}
       <main className="content">
-        <p>
-          Please record your voice input to generate a transcript. Once the transcript appears, you can optimize it.
-        </p>
-        {errorMessage && <p className="error">{errorMessage}</p>}
+        <p>Please press the buttons below to record and process your voice input.</p>
+
+        {/* Action Buttons */}
         <div className="button-container">
-          <button onClick={startRecording} disabled={isRecording || isConverting} className="btn btn-record">
+          <button onClick={handleRecording} disabled={isRecording} className="btn btn-record">
             <FaMicrophone /> {isRecording ? "Recording..." : "Start Recording"}
           </button>
-          <button onClick={stopRecording} disabled={!isRecording} className="btn btn-rec-stop">
-            <FaStop /> Stop Recording
+          <button onClick={handleProcessing} disabled={isProcessing} className="btn btn-process">
+            <FaPlay /> {isProcessing ? "Processing..." : "Run Processing"}
           </button>
-          <button onClick={deleteAudio} disabled={!transcription} className="btn btn-abort">
-            <FaTrash /> Clear Transcript
-          </button>
-          <button onClick={handleOptimize} disabled={isOptimizing || !transcription} className="btn btn-process">
-            <FaPlay /> {isOptimizing ? "Optimizing..." : "Optimize"}
+          <button onClick={handleOptimzier} disabled={isOptimizing} className="btn btn-process">
+            <FaPlay /> {isOptimizing ? "Optimizing..." : "Run Optimizer"}
           </button>
         </div>
-        {transcription && (
-          <div className="transcript-display">
-            <h3>Transcription:</h3>
-            <p>{transcription}</p>
-          </div>
-        )}
       </main>
 
-      {/* Popup for Optimized Schedule */}
+      {/* Popup Table for Output */}
       {showPopup && outputData && (
-        <div className="popup">
-          <div className="popup-content">
-            <div className="popup-header">
-              <h2>Schedule Preview</h2>
-              <button onClick={() => setShowPopup(false)} className="close-btn">
-                <FaTimes />
-              </button>
-            </div>
-            <p>Below is the optimized schedule. Please verify the details.</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Scan ID</th>
-                  <th>Scan Type</th>
-                  <th>Duration</th>
-                  <th>Priority</th>
-                  <th>Patient ID</th>
-                  <th>Check In Date</th>
-                  <th>Check In Time</th>
-                  <th>Unit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {outputData.map((row, index) => (
-                  <tr key={index}>
-                    <td>{row.scan_id}</td>
-                    <td>{row.scan_type}</td>
-                    <td>{row.duration}</td>
-                    <td>{row.priority}</td>
-                    <td>{row.patient_id}</td>
-                    <td>{row.check_in_date}</td>
-                    <td>{row.check_in_time}</td>
-                    <td>{row.machine}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="button-container">
-              <button onClick={() => setShowPopup(false)} className="btn btn-close">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="popup">
+    <div className="popup-content">
+      <div className="popup-header">
+        <h2>Schedule Preview</h2>
+        <button onClick={() => setShowPopup(false)} className="close-btn">
+          <FaTimes />
+        </button>
+      </div>
+      <p>Displaying request information. Please verify all data is correct.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Scan ID</th>
+            <th>Scan Type</th>
+            <th>Duration</th>
+            <th>Priority</th>
+            <th>Patient ID</th>
+            <th>Check In Date</th>
+            <th>Check In Time</th>
+            <th>Unit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {outputData.map((row, index) => (
+            <tr key={index}>
+              <td>{row.scan_id}</td>
+              <td>{row.scan_type}</td>
+              <td>{row.duration}</td>
+              <td>{row.priority}</td>
+              <td>{row.patient_id}</td>
+              <td>{row.check_in_date}</td>
+              <td>{row.check_in_time}</td>
+              <td>{row.unit}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="button-container">
+        <button onClick={() => setShowPopup(false)} className="btn btn-close">
+          Close
+        </button>
+        <button onClick={() => setShowPopup(false)} className="btn btn-commit">
+          Commit
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
