@@ -16,7 +16,7 @@ export default function AudioRecorder() {
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const audioChunksRef = useRef([]);
-
+  const manuallyStoppedRef = useRef(false);
   useEffect(() => {
     navigator.mediaDevices
       .enumerateDevices()
@@ -31,6 +31,7 @@ export default function AudioRecorder() {
   }, []);
 
   const startRecording = async () => {
+    manuallyStoppedRef.current = false; // reset on each start
     setErrorMessage("");
     setTranscription(""); // Clear previous transcription
     try {
@@ -57,10 +58,23 @@ export default function AudioRecorder() {
 
       // When recording stops, process the audio data
       recorder.onstop = async () => {
+        if (!manuallyStoppedRef.current) {
+          console.warn("Recorder stopped automatically. Skipping upload.");
+          setErrorMessage("Recording was too short or ended unexpectedly. Try again.");
+          setIsRecording(false);
+          return;
+        }
+      
         setIsRecording(false);
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
-        console.log("Recorded audio blob:", blob);
       
+        if (blob.size < 1000) {
+          console.warn("Audio blob too small. Likely not useful for transcription.");
+          setErrorMessage("Recording was too short. Try again.");
+          return;
+        }
+      
+        console.log("Recorded audio blob:", blob);
         setIsConverting(true);
         try {
           // Prepare form data to send the audio blob
@@ -95,11 +109,15 @@ export default function AudioRecorder() {
   };
 
   const stopRecording = () => {
+    manuallyStoppedRef.current = true;
+    mediaRecorderRef.current.stop();
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
+      
       setIsRecording(false);
     }
   };
