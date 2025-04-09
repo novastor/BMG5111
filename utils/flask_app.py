@@ -121,14 +121,14 @@ def optimize_workflow():
     logging.info(f"Processed CSV Output:\n{processed_csv}")
 
     # Convert CSV string to list of dictionaries.
-    try:
-        csv_reader = csv.DictReader(io.StringIO(processed_csv))
-        processed_output = (csv_reader)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error converting CSV: {e}")
+ # try:
+ #     csv_reader = csv.DictReader(io.StringIO(processed_csv))
+ #     processed_output = list(csv_reader)
+ # except Exception as e:
+ #     raise HTTPException(status_code=500, detail=f"Error converting CSV: {e}")
 
-    # Optimize the workflow using the opt() function
-    optimized_csv = opt(processed_output)
+ # # Optimize the workflow using the opt() function
+    optimized_csv = opt(processed_csv)
     if isinstance(optimized_csv, str):
         try:
             csv_reader = csv.DictReader(io.StringIO(optimized_csv))
