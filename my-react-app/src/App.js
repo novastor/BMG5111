@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { FaMicrophone, FaStop, FaTrash, FaPlay, FaTimes } from "react-icons/fa";
 import "./styles.css";
 
@@ -12,17 +12,30 @@ export default function AudioRecorder() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null); // 👈 new
 
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const audioChunksRef = useRef([]);
 
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl); // 👈 cleanup
+      }
+    };
+  }, [audioUrl]);
+
   const startRecording = async () => {
     setErrorMessage("");
-    setTranscription(""); // Clear any previous transcript
+    setTranscription("");
+    setAudioUrl(null); // clear previous audio preview
+
     try {
       setIsRecording(true);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("Audio tracks:", stream.getAudioTracks());
+
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
@@ -37,42 +50,38 @@ export default function AudioRecorder() {
       recorder.onstop = async () => {
         setIsRecording(false);
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        console.log("Recorded audio blob:", blob);
+        console.log("Recorded audio blob:", blob, "size:", blob.size);
 
-        // Convert the WebM blob to WAV using the Web Audio API and audio-buffer-to-wav
+// 🔊 Create audio preview
+        const audioURL = URL.createObjectURL(blob);
+        const audio = new Audio(audioURL);
+        audio.controls = true;
+        document.body.appendChild(audio);
+        audio.play(); // attempt to play
+        const previewUrl = URL.createObjectURL(blob); // 👈 create playback URL
+        setAudioUrl(previewUrl);
+
         setIsConverting(true);
         try {
           const formData = new FormData();
           formData.append("file", blob, "recording.webm");
 
-          try {
-            const response = await fetch(`${API_BASE_URL}/record`, {
-              method: "POST",
-              body: formData,
-            });
-            if (!response.ok) {
-              throw new Error(`HTTP error: status ${response.status}`);
-            }
-            const result = await response.json();
-            console.log("Transcription received:", result.transcription);
-            setTranscription(result.transcription);
+          const response = await fetch(`${API_BASE_URL}/record`, {
+            method: "POST",
+            body: formData,
+          });
 
-            // Ensure outputData is set properly before showing the popup
-            if (result.schedule && Array.isArray(result.schedule)) {
-              setOutputData(result.schedule);
-              setShowPopup(true);
-            } else {
-              setErrorMessage("Received invalid schedule data.");
-            }
-          } catch (uploadError) {
-            console.error("Error uploading audio:", uploadError);
-            setErrorMessage("Error uploading audio: " + uploadError.message);
-          } finally {
-            setIsConverting(false);
+          if (!response.ok) {
+            throw new Error(`HTTP error: status ${response.status}`);
           }
-        } catch (conversionError) {
-          console.error("Error processing audio:", conversionError);
-          setErrorMessage("Error processing audio: " + conversionError.message);
+
+          const result = await response.json();
+          console.log("Transcription received:", result.transcription);
+          setTranscription(result.transcription);
+        } catch (uploadError) {
+          console.error("Error uploading audio:", uploadError);
+          setErrorMessage("Error uploading audio: " + uploadError.message);
+        } finally {
           setIsConverting(false);
         }
       };
@@ -85,7 +94,6 @@ export default function AudioRecorder() {
     }
   };
 
-  // Stop recording and release media resources
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
@@ -96,19 +104,19 @@ export default function AudioRecorder() {
     }
   };
 
-  // Delete the displayed transcription and clear any output/errors
   const deleteAudio = () => {
     setTranscription("");
     setOutputData(null);
     setErrorMessage("");
+    setAudioUrl(null); // also clear audio preview
   };
 
-  // Send the transcription to the backend to optimize the workflow
   const handleOptimize = async () => {
     if (!transcription) {
       setErrorMessage("No transcription available for optimization.");
       return;
     }
+
     setErrorMessage("");
     setIsOptimizing(true);
     try {
@@ -139,9 +147,7 @@ export default function AudioRecorder() {
       </header>
 
       <main className="content">
-        <p>
-          Please record your voice input to generate a transcript. Once the transcript appears, you can optimize it.
-        </p>
+        <p>Please record your voice input to generate a transcript. Once the transcript appears, you can optimize it.</p>
         {errorMessage && <p className="error">{errorMessage}</p>}
         <div className="button-container">
           <button onClick={startRecording} disabled={isRecording || isConverting} className="btn btn-record">
@@ -157,6 +163,14 @@ export default function AudioRecorder() {
             <FaPlay /> {isOptimizing ? "Optimizing..." : "Optimize"}
           </button>
         </div>
+
+        {audioUrl && (
+          <div className="audio-preview">
+            <h4>Audio Preview:</h4>
+            <audio controls src={audioUrl} />
+          </div>
+        )}
+
         {transcription && (
           <div className="transcript-display">
             <h3>Transcription:</h3>
@@ -165,8 +179,7 @@ export default function AudioRecorder() {
         )}
       </main>
 
-      {/* Popup for Optimized Schedule */}
-      {showPopup && outputData && Array.isArray(outputData) && (
+      {showPopup && outputData && (
         <div className="popup">
           <div className="popup-content">
             <div className="popup-header">
