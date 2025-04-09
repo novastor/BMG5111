@@ -123,7 +123,7 @@ def optimize_workflow():
     # Convert CSV string to list of dictionaries.
     try:
         csv_reader = csv.DictReader(io.StringIO(processed_csv))
-        processed_output = list(csv_reader)
+        processed_output = (csv_reader)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error converting CSV: {e}")
 
