@@ -214,6 +214,12 @@ export default function AudioRecorder() {
             <p>{transcription}</p>
           </div>
         )}
+        {audioURL && (
+      <div className="audio-preview">
+       <h4>Playback:</h4>
+      <audio controls src={audioURL}></audio>
+      </div>
+)}
       </main>
 
       {/* Popup for Optimized Schedule */}
