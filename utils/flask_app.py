@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 # CORS Middleware – Allow requests from any frontend.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this for production by specifying your frontend URL(s)
+    allow_origins=["https://bmg5111-1.onrender.com"],  # Specify your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
