@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@testing-library/user-event": "^13.5.0",
+    "audiobuffer-to-wav": "^1.0.0",
     "extendable-media-recorder": "^9.2.23",
     "framer-motion": "^12.6.2",
     "react": "^19.0.0",
