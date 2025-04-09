@@ -12,21 +12,20 @@ export default function AudioRecorder() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
-  
+
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const audioChunksRef = useRef([]);
 
   useEffect(() => {
-    // Enumerate devices when the component is mounted
     navigator.mediaDevices.enumerateDevices().then(devices => {
       devices.forEach(device => {
-        console.log(device.kind, device.label); // Log the kind and label of the devices
+        console.log(device.kind, device.label);
       });
     }).catch(err => {
       console.error("Error enumerating devices:", err);
     });
-  }, []); // Empty dependency array to run it once when the component mounts
+  }, []);
 
   const startRecording = async () => {
     setErrorMessage("");
@@ -50,32 +49,25 @@ export default function AudioRecorder() {
         const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         console.log("Recorded audio blob:", blob);
 
-        // Convert the WebM blob to WAV using the Web Audio API and audio-buffer-to-wav
         setIsConverting(true);
-         try {
-           const formData = new FormData();
-           formData.append("file", blob, "recording.webm");
-         
-          try {
-            const response = await fetch(`${API_BASE_URL}/record`, {
-              method: "POST",
-              body: formData,
-            });
-            if (!response.ok) {
-              throw new Error(`HTTP error: status ${response.status}`);
-            }
-            const result = await response.json();
-            console.log("Transcription received:", result.transcription);
-            setTranscription(result.transcription);
-          } catch (uploadError) {
-            console.error("Error uploading audio:", uploadError);
-            setErrorMessage("Error uploading audio: " + uploadError.message);
-          } finally {
-            setIsConverting(false);
+        try {
+          const formData = new FormData();
+          formData.append("file", blob, "recording.webm");
+
+          const response = await fetch(`${API_BASE_URL}/record`, {
+            method: "POST",
+            body: formData,
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error: status ${response.status}`);
           }
-        } catch (conversionError) {
-          console.error("Error processing audio:", conversionError);
-          setErrorMessage("Error processing audio: " + conversionError.message);
+          const result = await response.json();
+          console.log("Transcription received:", result.transcription);
+          setTranscription(result.transcription);
+        } catch (uploadError) {
+          console.error("Error uploading audio:", uploadError);
+          setErrorMessage("Error uploading audio: " + uploadError.message);
+        } finally {
           setIsConverting(false);
         }
       };
@@ -88,7 +80,6 @@ export default function AudioRecorder() {
     }
   };
 
-  // Stop recording and release media resources
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
@@ -96,6 +87,44 @@ export default function AudioRecorder() {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
       setIsRecording(false);
+    }
+  };
+
+  const deleteAudio = () => {
+    setTranscription(""); // Clear the transcription
+    setOutputData(null);   // Clear any previous output data
+    setErrorMessage("");   // Clear any error messages
+  };
+
+  const handleOptimize = async () => {
+    if (!transcription) {
+      setErrorMessage("No transcription available for optimization.");
+      return;
+    }
+    setErrorMessage(""); // Clear any previous error
+    setIsOptimizing(true); // Show the loading state
+    try {
+      const response = await fetch(`${API_BASE_URL}/optimize`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ transcription }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error: status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Optimization response:", data.schedule);
+      setOutputData(data.schedule); // Set the output data to show the optimized result
+      setShowPopup(true); // Show the popup with the optimized schedule
+    } catch (optimizeError) {
+      console.error("Optimization error:", optimizeError);
+      setErrorMessage("Optimization failed: " + optimizeError.message); // Display an error if optimization fails
+    } finally {
+      setIsOptimizing(false); // Hide the loading state after completion
     }
   };
 
