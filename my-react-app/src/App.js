@@ -54,7 +54,7 @@ export default function AudioRecorder() {
           // Now upload the converted WAV file to the server
           const formData = new FormData();
           formData.append("file", wavBlob, "recording.wav");
-
+          console.log("Uploading wavBlob size:", wavBlob.size);
           try {
             const response = await fetch(`${API_BASE_URL}/record`, {
               method: "POST",

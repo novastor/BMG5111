@@ -78,7 +78,7 @@ async def record_and_transcribe(file: UploadFile = File(...)):
     audio_data = await file.read()
     if not audio_data:
         raise HTTPException(status_code=400, detail="No audio data received")
-
+    
     logging.info(f"Received audio data (first 100 bytes): {audio_data[:100]!r}")
 
     # Convert the audio data into a buffer (in-memory)
@@ -86,7 +86,7 @@ async def record_and_transcribe(file: UploadFile = File(...)):
 
     # Convert from WebM to WAV (adjust format if necessary)
     try:
-        audio = AudioSegment.from_file(audio_buffer, format="webm")
+        audio = AudioSegment.from_file(audio_buffer, format="wav")
         wav_buffer = BytesIO()
         audio.export(wav_buffer, format="wav")
         wav_buffer.seek(0)
