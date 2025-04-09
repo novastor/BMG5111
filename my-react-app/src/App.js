@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { FaMicrophone, FaStop, FaTrash, FaPlay, FaTimes } from "react-icons/fa";
-import audioBufferToWav from "audiobuffer-to-wav";
 import "./styles.css";
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
@@ -42,19 +41,10 @@ export default function AudioRecorder() {
 
         // Convert the WebM blob to WAV using the Web Audio API and audio-buffer-to-wav
         setIsConverting(true);
-        try {
-          const arrayBuffer = await blob.arrayBuffer();
-          const audioContext = new AudioContext();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-          // Convert AudioBuffer to WAV format
-          const wavArrayBuffer = audioBufferToWav(audioBuffer);
-          const wavBlob = new Blob([wavArrayBuffer], { type: "audio/wav" });
-
-          // Now upload the converted WAV file to the server
-          const formData = new FormData();
-          formData.append("file", wavBlob, "recording.wav");
-          console.log("Uploading wavBlob size:", wavBlob.size);
+         try {
+           const formData = new FormData();
+           formData.append("file", blob, "recording.webm");
+         
           try {
             const response = await fetch(`${API_BASE_URL}/record`, {
               method: "POST",
