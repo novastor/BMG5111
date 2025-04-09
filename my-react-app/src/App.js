@@ -12,6 +12,8 @@ export default function AudioRecorder() {
   const [errorMessage, setErrorMessage] = useState("");
   const [showPopup, setShowPopup] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioURL, setAudioURL] = useState("");
 
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -58,37 +60,40 @@ export default function AudioRecorder() {
 
       // When recording stops, process the audio data
       recorder.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+      
         if (!manuallyStoppedRef.current) {
           console.warn("Recorder stopped automatically. Skipping upload.");
-          setErrorMessage("Recording was too short or ended unexpectedly. Try again.");
+          setErrorMessage("Recording ended unexpectedly. Try again.");
           setIsRecording(false);
           return;
         }
       
-        setIsRecording(false);
-        const blob = new Blob(audioChunksRef.current, { type: mimeType });
-      
         if (blob.size < 1000) {
-          console.warn("Audio blob too small. Likely not useful for transcription.");
+          console.warn("Audio blob too small.");
           setErrorMessage("Recording was too short. Try again.");
+          setIsRecording(false);
           return;
         }
       
+        setAudioBlob(blob);
+        setAudioURL(URL.createObjectURL(blob)); // create playback URL
         console.log("Recorded audio blob:", blob);
+      
         setIsConverting(true);
         try {
-          // Prepare form data to send the audio blob
           const formData = new FormData();
           formData.append("file", blob, mimeType.includes("ogg") ? "recording.ogg" : "recording.webm");
       
-          // Send blob to the /record endpoint for transcription
           const response = await fetch(`${API_BASE_URL}/record`, {
             method: "POST",
             body: formData,
           });
+      
           if (!response.ok) {
             throw new Error(`HTTP error: status ${response.status}`);
           }
+      
           const result = await response.json();
           console.log("Transcription received:", result.transcription);
           setTranscription(result.transcription);
@@ -97,8 +102,10 @@ export default function AudioRecorder() {
           setErrorMessage("Error uploading audio: " + uploadError.message);
         } finally {
           setIsConverting(false);
+          setIsRecording(false);
         }
       };
+      
 
       recorder.start();
     } catch (error) {
