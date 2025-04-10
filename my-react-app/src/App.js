@@ -1,3 +1,5 @@
+//some code snippets developed from gpt (mainly styling and the audio pipeline)
+
 import React, { useState, useRef, useEffect } from "react";
 import { FaMicrophone, FaStop, FaTrash, FaPlay, FaTimes } from "react-icons/fa";
 import "./styles.css";
@@ -33,32 +35,32 @@ export default function AudioRecorder() {
   }, []);
 
   const startRecording = async () => {
-    manuallyStoppedRef.current = false; // reset on each start
+    manuallyStoppedRef.current = false;
     setErrorMessage("");
-    setTranscription(""); // Clear previous transcription
+    setTranscription(""); 
     try {
       setIsRecording(true);
-      // Request permission for the audio stream
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      // Check for Firefox-compatible MIME type (preferred: audio/ogg; codecs=opus)
+      // doing this to let me run on non-edge browsers(specifically tested on firefox w/ ubuntu24.04)
       const mimeType = MediaRecorder.isTypeSupported("audio/ogg; codecs=opus")
         ? "audio/ogg; codecs=opus"
-        : "audio/webm"; // fallback to WebM
+        : "audio/webm"; //this is a backup method
       
       const recorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      // Collect audio data chunks
+      // actually getting the recording
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
-      // When recording stops, process the audio data
+      // wait until it finishes recording(previous iterations stopped too quickly, so added methods to check if the size is too small or if its empty)
       recorder.onstop = async () => {
         const blob = new Blob(audioChunksRef.current, { type: mimeType });
       
@@ -77,7 +79,7 @@ export default function AudioRecorder() {
         }
       
         setAudioBlob(blob);
-        setAudioURL(URL.createObjectURL(blob)); // create playback URL
+        setAudioURL(URL.createObjectURL(blob)); // create playback 
         console.log("Recorded audio blob:", blob);
       
         setIsConverting(true);
@@ -109,7 +111,7 @@ export default function AudioRecorder() {
 
       recorder.start();
     } catch (error) {
-      console.error("Error accessing microphone:", error);
+      console.error("Error accessing microphone:", error); //put this in to log if the microphone input is working or missing. previous versions woudl have issues with audio from the wrong source not reaching the browser, but not tripping an error, so resulted in empty blobs and invalid transcripts
       setErrorMessage("Error accessing microphone: " + error.message);
       setIsRecording(false);
     }
@@ -130,18 +132,18 @@ export default function AudioRecorder() {
   };
 
   const deleteAudio = () => {
-    setTranscription(""); // Clear the transcription
-    setOutputData(null);   // Clear any previous output data
-    setErrorMessage("");   // Clear any error messages
+    setTranscription(""); // Clear the transcript, data and any error
+    setOutputData(null);  
+    setErrorMessage("");   
   };
 
   const handleOptimize = async () => {
     if (!transcription) {
-      setErrorMessage("No transcription available for optimization.");
+      setErrorMessage("No transcription found!");
       return;
     }
-    setErrorMessage(""); // Clear any previous error
-    setIsOptimizing(true); // Start loading indicator
+    setErrorMessage(""); 
+    setIsOptimizing(true); 
     try {
       const response = await fetch(`${API_BASE_URL}/optimize`, {
         method: "POST",
@@ -157,8 +159,8 @@ export default function AudioRecorder() {
       
       const data = await response.json();
       console.log("Optimization response:", data.schedule);
-      setOutputData(data.schedule); // Set the output data for the optimized schedule
-      setShowPopup(true); // Show the popup with the optimized schedule
+      setOutputData(data.schedule);
+      setShowPopup(true); 
     } catch (optimizeError) {
       console.error("Optimization error:", optimizeError);
       setErrorMessage("Optimization failed: " + optimizeError.message);
@@ -175,7 +177,7 @@ export default function AudioRecorder() {
 
       <main className="content">
         <p>
-          Please record your voice input to generate a transcript. Once the transcript appears, you can optimize it.
+          Press start to record voice input, stop to finish the recording and generate a transcipt, and optimize to process the text and add it to our schedule! 
         </p>
         {errorMessage && <p className="error">{errorMessage}</p>}
         <div className="button-container">
@@ -222,7 +224,7 @@ export default function AudioRecorder() {
 )}
       </main>
 
-      {/* Popup for Optimized Schedule */}
+      {/* this controls the popup schedule table, with some formatting pulled from the styles.css file*/}
       {showPopup && outputData && (
         <div className="popup">
           <div className="popup-content">
@@ -232,7 +234,7 @@ export default function AudioRecorder() {
                 <FaTimes />
               </button>
             </div>
-            <p>Below is the optimized schedule. Please verify the details.</p>
+            <p>Displaying the new schedule, please verify that all the values are correct before hitting enter!</p>
             <table>
               <thead>
                 <tr>

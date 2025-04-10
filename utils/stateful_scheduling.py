@@ -22,8 +22,7 @@ HARDCODED_CHECK_IN_TIME = check_in_time
 
 def convert_output_to_csv(old_output):
     """
-    Convert the old output string used from the old code to work with the optimization script without needing to rewrite both of them(not ideal but time-efficient)
-
+    this function converts the output from the MVP code to match the structured csv headers for the optimizer
     """
     # Assume the old output is comma-separated, e.g., "Head and Neck,Acute stroke,P1,24,MRI"
     parts = old_output.split(',')
@@ -31,22 +30,16 @@ def convert_output_to_csv(old_output):
         print("actual length")
         print(len(parts))
         raise ValueError("Expected at least 5 comma-separated values in the old output")
-    
-    # Extract the required parts
-    # Using parts[4] for scan_type (the last value)
+
     scan_type = parts[4].strip()
     
-    # Extract priority from parts[2] and remove non-digit characters 
     priority = ''.join(filter(str.isdigit, parts[2]))
     
-    # Create an in-memory CSV string
     output = io.StringIO()
     writer = csv.writer(output)
     
-    # Write headers
     writer.writerow(["scan_id", "scan_type", "duration", "priority", "patient_id", "check_in_date", "check_in_time"])
     
-    # Write row with mapped and hardcoded values
     writer.writerow([
         HARDCODED_SCAN_ID,
         scan_type,
@@ -70,9 +63,7 @@ def search_with_rag(index_name, input_text):
     load_dotenv()
     api_key = os.getenv("OPENAI_API_KEY")
     pc_key  =  os.getenv("PINECONE_API_KEY")
-    # Reinitialize chat history if needed
     chat_history = []
-    # Setup embeddings and Pinecone vector store
     embeddings = OpenAIEmbeddings(api_key=api_key)
     vectorstore = PineconeVectorStore(
         index_name=index_name,
@@ -80,14 +71,12 @@ def search_with_rag(index_name, input_text):
         pinecone_api_key=pc_key
     )
 
-    # Setup chat model
     chat = ChatOpenAI(verbose=True, temperature=0, model_name="gpt-4o-mini", api_key=api_key)
 
     qa = ConversationalRetrievalChain.from_llm(
         llm=chat, chain_type="stuff", retriever=vectorstore.as_retriever()
     )
-
-    # Prepare prompt and query the chain
+    #prompt was improved using gpt to run faster and more reliably for the new whisper api
     prompt = (
     "Extract the following information from the provided text: \n"
     "1. Condition location (e.g., head, torso, etc.)\n"
@@ -108,7 +97,6 @@ def search_with_rag(index_name, input_text):
     
     old_output = res["answer"]
     
-    # Convert the old output to CSV format
     csv_result = convert_output_to_csv(old_output)
     print("\nCSV Output:")
     print((old_output).__class__)
