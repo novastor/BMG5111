@@ -74,8 +74,7 @@ async def record_and_transcribe(file: UploadFile = File(...)):
 @app.post("/process")
 def process_transcription():
     """
-    Process the recorded transcription using RAG.
-    Uses the transcript stored by /record.
+    placeholder for purely testing the RAG system. kept for debugging but not available to the user directly. 
     """
     global g_ts
     if not g_ts:
